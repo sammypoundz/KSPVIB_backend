@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Verification — KSPVIB Portal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+
+    <header class="topbar">
+      <div class="logo">KSG</div>
+      <div class="topbar-text">
+        <div class="gov">KANO STATE GOVERNMENT</div>
+        <div class="portal">Private &amp; Voluntary Education Portal</div>
+      </div>
+      <span class="badge">KSPVIB</span>
+    </header>
+
+    <main class="hero">
+      <h1>Invoice Verification</h1>
+      <p class="lead">Confirm the authenticity and payment status of an invoice issued by the Kano State Private and Voluntary Institutions Board.</p>
+
+      <section class="card">
+        <form id="verifyForm" autocomplete="off">
+          <label for="invoiceNumber">Invoice number</label>
+          <div class="row">
+            <input id="invoiceNumber" placeholder="e.g. INV-2026-0001" spellcheck="false" />
+            <button type="submit" id="verifyBtn">Verify</button>
+          </div>
+          <div class="hints">
+            <button type="button" class="chip" data-inv="INV-2026-0001">INV-2026-0001 · Paid</button>
+            <button type="button" class="chip" data-inv="INV-2026-0004">INV-2026-0004 · Unpaid</button>
+          </div>
+        </form>
+
+        <div id="result" class="result" aria-live="polite"></div>
+      </section>
+
+      <ul class="features">
+        <li><strong>Instant check</strong><span>Status is verified against the official records in real time.</span></li>
+        <li><strong>Official receipts</strong><span>Download receipts only after payment is confirmed.</span></li>
+        <li><strong>Secure by design</strong><span>Status comes from the server — never from the QR code itself.</span></li>
+      </ul>
+    </main>
+
+    <footer>
+      This page confirms invoices issued through the Kano State VPE Portal.<br>
+      Kano State Ministry of Education · KSPVIB
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
