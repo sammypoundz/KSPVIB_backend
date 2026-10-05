@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { verifyInvoice, money, fmtDate } from "./api.js";
+import { verifyInvoice, money, fmtDate, downloadDocPdf } from "./api.js";
 import QrCode from "./QrCode.jsx";
 import logo from "./assets/KSPVIB.jpg.jpeg";
 
@@ -24,9 +24,7 @@ export default function InvoicePage() {
           setState({
             loading: false,
             invoice: data.invoice,
-            verifyUrl: `${window.location.origin}/verify?inv=${encodeURIComponent(
-              data.invoiceNumber,
-            )}`,
+            verifyUrl: data.verifyUrl,
           }),
       )
       .catch(
@@ -40,7 +38,7 @@ export default function InvoicePage() {
   // Browser tab / PDF filename states the document type explicitly
   useEffect(() => {
     document.title = state.invoice
-      ? `Invoice ${state.invoice.invoiceNumber} — KSPVIB`
+      ? `Payment Invoice ${state.invoice.invoiceNumber} — KSPVIB`
       : state.error
         ? "Invoice unavailable — KSPVIB"
         : "Invoice — KSPVIB";
@@ -49,9 +47,10 @@ export default function InvoicePage() {
   return (
     <div className="doc-page">
       <div className="printbar">
-        <button onClick={() => window.print()}>
-          Print / Save invoice as PDF
+        <button onClick={() => downloadDocPdf("invoice", ref)}>
+          Download PDF
         </button>
+        <button onClick={() => window.print()}>Print</button>
         <a href="/verify">← Back to verification</a>
       </div>
       <article className="doc-paper invoice-doc">
@@ -84,12 +83,13 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
       </div>
       <div className="title-row">
         <div>
-          <div className="title">Invoice</div>
+          <div className="title">PAYMENT INVOICE</div>
           <p className="intro">
             This is an official invoice issued by the Kano State Private and
             Voluntary Institutions Board (KSPVIB). It is a request for payment
-            — it is <strong>not</strong> proof of payment. Scan the QR code to
-            verify its current status at any time.
+            — it is <strong>not</strong> proof of payment. Scan the QR code or
+            use the verification link to confirm its current status at any
+            time.
           </p>
         </div>
         <div className="meta">
@@ -97,33 +97,39 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
           <div className="no">{inv.invoiceNumber}</div>
           <div>Issued: {fmtDate(inv.issued)}</div>
           <span className={`pill ${paid ? "paid" : "unpaid"}`}>
-            {paid ? "✓ PAID" : "UNPAID"}
+            {paid ? "PAID" : "UNPAID"}
           </span>
         </div>
       </div>
       <div className="boxes">
-        <Box cap="RECEIVED FROM" val={inv.school} sub={inv.state} />
+        <div className="box">
+          <div className="cap">BILLED TO</div>
+          <div className="val school">{inv.school}</div>
+          <div className="sub">LGA: {inv.lga || "—"}</div>
+          <div className="sub">School Grade: {inv.grade || "—"}</div>
+          <div className="sub">Term: {inv.term || "—"}</div>
+        </div>
         <Box cap="CATEGORY" val={inv.paymentType} />
         <Box cap="PROPRIETOR" val={inv.proprietor || "—"} />
       </div>
       <table>
         <thead>
           <tr>
-            <th>#</th>
+            <th className="col-idx">#</th>
             <th>DESCRIPTION</th>
-            <th>AMOUNT</th>
+            <th className="col-amt">AMOUNT</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>1</td>
             <td>{inv.description}</td>
-            <td>{money(inv.amount)}</td>
+            <td className="amt">{money(inv.amount)}</td>
           </tr>
         </tbody>
       </table>
       <div className="total">
-        <span>Total Due</span>
+        <span>Total Amount</span>
         <strong>{money(inv.amount)}</strong>
       </div>
       <div className="bottom">
@@ -131,29 +137,31 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
           Make payment through the KSPVIB portal.
           <br />
           A receipt becomes available once payment is confirmed.
-          <br />
-          <br />
-          Kano State Ministry of Education
-          <br />
-          Private and Voluntary Institutions Board (KSPVIB)
+          <div className="verify-link">
+            <a href={verifyUrl}>Verify Payment Status</a>
+          </div>
+          <div className="foot-note">
+            Kano State Ministry of Education
+            <br />
+            Private and Voluntary Institutions Board (KSPVIB)
+          </div>
         </div>
         <div className="qr-block">
           <QrCode value={verifyUrl} />
-          <div className="verify-url">
-            Scan to verify this invoice: {verifyUrl}
-          </div>
+          <a className="verify-url" href={verifyUrl}>
+            Verify Invoice
+          </a>
         </div>
       </div>
     </>
   );
 }
 
-function Box({ cap, val, sub }) {
+function Box({ cap, val }) {
   return (
     <div className="box">
       <div className="cap">{cap}</div>
       <div className="val">{val}</div>
-      {sub && <div className="sub">{sub}</div>}
     </div>
   );
 }

@@ -40,10 +40,17 @@ export async function fetchReceipt(ref) {
   return data;
 }
 
+// Downloads the server-generated PDF (headless Chromium, headers/footers
+// stripped) — identical layout to the on-screen preview and browser print.
+export function downloadDocPdf(kind, ref) {
+  window.location.href = `/api/${kind}/${encodeURIComponent(ref)}/pdf`;
+}
+
 export const money = (n) =>
-  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(
-    n,
-  );
+  `\u20A6${Number(n || 0).toLocaleString("en-NG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 export const fmtDate = (iso) =>
   new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {

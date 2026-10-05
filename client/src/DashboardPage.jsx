@@ -60,7 +60,7 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   <th>Invoice</th>
-                  <th>Received From</th>
+                  <th>Billed To</th>
                   <th>Category</th>
                   <th>Amount</th>
                   <th>Issued</th>

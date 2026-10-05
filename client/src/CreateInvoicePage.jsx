@@ -23,12 +23,26 @@ const DESCRIPTIONS = {
   Other: "Other Fee",
 };
 
+const TERMS = ["First Term", "Second Term", "Third Term"];
+const GRADES = ["Grade A", "Grade B", "Grade C", "Grade D"];
+const LGAS = [
+  "Ajingi", "Albasu", "Bagwai", "Bebeji", "Bichi", "Bunkure", "Dala",
+  "Dambatta", "Dawakin Kudu", "Dawakin Tofa", "Doguwa", "Fagge", "Gabasawa",
+  "Garko", "Garun Mallam", "Gaya", "Gezawa", "Gwale", "Kano Municipal",
+  "Karaye", "Kibiya", "Kiru", "Kumbotso", "Kunchi", "Kura", "Makoda",
+  "Minjibir", "Nasarawa", "Rano", "Rimin Gado", "Roggo", "Shanono",
+  "Sumaila", "Takai", "Tarauni", "Tofa", "Tudun Wada", "Ungogo", "Warawa", "Wudil",
+];
+
 export default function CreateInvoicePage() {
   const [form, setForm] = useState({
     school: "",
     proprietor: "",
     paymentType: "Tuition Fees",
     amount: "",
+    lga: "Nasarawa",
+    grade: "Grade B",
+    term: "First Term",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -45,6 +59,9 @@ export default function CreateInvoicePage() {
         proprietor: form.proprietor.trim(),
         paymentType: form.paymentType,
         amount: Number(form.amount),
+        lga: form.lga,
+        grade: form.grade,
+        term: form.term,
       });
       navigate(`/verify?inv=${encodeURIComponent(data.invoice.invoiceNumber)}`);
     } catch (err) {
@@ -67,7 +84,7 @@ export default function CreateInvoicePage() {
       <section className="card create-card">
         <form onSubmit={submit} className="create-form" autoComplete="off">
           <div className="field">
-            <label htmlFor="school">Received From</label>
+            <label htmlFor="school">Billed To (School Name)</label>
             <input
               id="school"
               required
@@ -116,6 +133,30 @@ export default function CreateInvoicePage() {
               readOnly
               value={DESCRIPTIONS[form.paymentType]}
             />
+          </div>
+          <div className="field">
+            <label htmlFor="lga">LGA</label>
+            <select id="lga" value={form.lga} onChange={set("lga")}>
+              {LGAS.map((l) => (
+                <option key={l}>{l}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="grade">School Grade</label>
+            <select id="grade" value={form.grade} onChange={set("grade")}>
+              {GRADES.map((g) => (
+                <option key={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="term">Term</label>
+            <select id="term" value={form.term} onChange={set("term")}>
+              {TERMS.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
           </div>
           <div className="field submit-field">
             <button className="primary" type="submit" disabled={loading}>

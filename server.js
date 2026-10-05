@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 // ---------------------------------------------------------------------------
 // MongoDB connection
 // ---------------------------------------------------------------------------
+const PDF_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
 const MONGODB_URI =
   process.env.MONGODB_URI ||
   "mongodb+srv://KSPVIB_User:KSPVIB_Pswrd@cluster0.di9abps.mongodb.net/KSPVIB?retryWrites=true&w=majority&appName=Cluster0";
@@ -36,6 +37,9 @@ async function connectDb() {
         {
           invoiceNumber: "INV-2026-0001",
           school: "PRIVATE SCHOOL TEST II",
+          lga: "Nassarawa",
+          grade: "Grade B",
+          term: "First Term",
           paymentType: "Renewal",
           description: "Renewal fee",
           amount: 100,
@@ -44,11 +48,13 @@ async function connectDb() {
           paidDate: "2026-09-15",
           receiptNumber: "RCP-2026-0001",
           proprietor: "—",
-          state: "Kano State",
         },
         {
           invoiceNumber: "INV-2026-0004",
           school: "PRIVATE SCHOOL TEST II",
+          lga: "Nassarawa",
+          grade: "Grade B",
+          term: "First Term",
           paymentType: "Registration",
           description: "Registration fee",
           amount: 150,
@@ -57,7 +63,6 @@ async function connectDb() {
           paidDate: null,
           receiptNumber: null,
           proprietor: "—",
-          state: "Kano State",
         },
       ]);
     }
@@ -89,15 +94,26 @@ const clean = (inv) =>
   inv && {
     invoiceNumber: inv.invoiceNumber,
     school: inv.school,
+    lga: inv.lga || "—",
+    grade: inv.grade || "—",
+    term: inv.term || "—",
     paymentType: inv.paymentType,
     description: inv.description,
     amount: inv.amount,
     issued: inv.issued,
     status: inv.status,
     paidDate: inv.paidDate,
-    state: inv.state,
     proprietor: inv.proprietor,
   };
+
+// Absolute origin used for QR codes / verification links so that generated
+// documents point at the production verification page, never a dev URL.
+function docOrigin(req) {
+  return (
+    PDF_BASE_URL ||
+    `${req.protocol}://${req.get("host") || `localhost:${PORT}`}`
+  );
+}
 
 const normRef = (ref) => String(ref || "").trim().toUpperCase();
 
@@ -176,7 +192,15 @@ app.get("/api/invoices", async (req, res) => {
 // POST /api/invoices — create a new invoice
 app.post("/api/invoices", async (req, res) => {
   try {
-    const { school, proprietor, paymentType, amount } = req.body || {};
+    const {
+      school,
+      proprietor,
+      paymentType,
+      amount,
+      lga,
+      grade,
+      term,
+    } = req.body || {};
     if (!school || !String(school).trim())
       return res.status(400).json({ ok: false, error: "Received From is required." });
     const amt = Number(amount);
@@ -189,6 +213,9 @@ app.post("/api/invoices", async (req, res) => {
     const inv = {
       invoiceNumber,
       school: String(school).trim().toUpperCase(),
+      lga: lga ? String(lga).trim() : "—",
+      grade: grade ? String(grade).trim() : "—",
+      term: term ? String(term).trim() : "—",
       paymentType: category,
       description: descriptions[category] || "Other Fee",
       amount: amt,
@@ -197,7 +224,6 @@ app.post("/api/invoices", async (req, res) => {
       paidDate: null,
       receiptNumber: null,
       proprietor: proprietor ? String(proprietor).trim() : "—",
-      state: "Kano State",
     };
     if (db) {
       await db.collection("invoices").insertOne(inv);
@@ -249,12 +275,14 @@ app.get("/api/verify/:ref", async (req, res) => {
       });
     }
     const sanitized = clean(inv);
+    const origin = docOrigin(req);
     res.json({
       ok: true,
       invoice: sanitized,
       receiptAvailable: inv.status === "PAID",
       receiptUrl:
         inv.status === "PAID" ? `/api/receipt/${inv.invoiceNumber}` : null,
+      verifyUrl: `${origin}/verify?inv=${encodeURIComponent(inv.invoiceNumber)}`,
     });
   } catch (err) {
     console.error(err);
@@ -287,8 +315,93 @@ app.get("/api/receipt/:ref", async (req, res) => {
       amount: inv.amount,
       paidDate: inv.paidDate,
     },
-    verifyUrl: `/verify?inv=${inv.invoiceNumber}`,
+    verifyUrl: `${docOrigin(req)}/verify?inv=${encodeURIComponent(inv.invoiceNumber)}`,
   });
+});
+
+// ---------------------------------------------------------------------------
+// Server-side PDF generation — guarantees the PDF contains ONLY the document
+// (no browser headers/footers, URLs, dates or page titles). Uses headless
+// Chromium's native PDF engine on the exact same A4 print stylesheet the
+// browser print dialog uses, so Print and PDF always match the on-screen
+// preview. Works identically on localhost and in production (Render etc.).
+// ---------------------------------------------------------------------------
+const puppeteer = require("puppeteer");
+
+let pdfBrowser = null;
+async function getPdfBrowser() {
+  if (!pdfBrowser) {
+    pdfBrowser = await puppeteer.launch({
+      args: ["--no-sandbox"],
+      // Prefer an explicitly configured Chrome (PUPPETEER_EXECUTABLE_PATH),
+      // then the system Chrome/Edge. On Render/Linux the bundled Chromium is
+      // used automatically when none of these are set.
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        puppeteer.executablePath() ||
+        undefined,
+    });
+  }
+  return pdfBrowser;
+}
+
+async function renderDocPdf(req, kind, ref) {
+  const origin = docOrigin(req);
+  const target = `${origin}/${kind}?inv=${encodeURIComponent(ref)}`;
+  const browser = await getPdfBrowser();
+  const page = await browser.newPage();
+  try {
+    await page.goto(target, { waitUntil: "networkidle0", timeout: 60000 });
+    await page.evaluateHandle("document.fonts.ready");
+    const pdfBuffer = await page.pdf({
+      printBackground: true,
+      preferCSSPageSize: true, // honours @page { size: A4 } from the stylesheet
+      displayHeaderFooter: false, // no header/footer — ever
+      margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+    });
+    return Buffer.from(pdfBuffer); // ensure binary, never string/JSON
+  } finally {
+    await page.close();
+  }
+}
+
+app.get("/api/invoice/:ref/pdf", async (req, res) => {
+  try {
+    const ref = normRef(req.params.ref);
+    const inv = await findInvoice(ref);
+    if (!inv) return res.status(404).json({ ok: false, error: "Invoice not found." });
+    const pdf = await renderDocPdf(req, "invoice", ref);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="Invoice-${ref}.pdf"`,
+    });
+    res.send(pdf);
+  } catch (err) {
+    console.error("Invoice PDF failed:", err.message);
+    res.status(500).json({ ok: false, error: "Could not generate the invoice PDF." });
+  }
+});
+
+app.get("/api/receipt/:ref/pdf", async (req, res) => {
+  try {
+    const ref = normRef(req.params.ref);
+    const inv = await findInvoice(ref);
+    if (!inv) return res.status(404).json({ ok: false, error: "Receipt not found." });
+    if (inv.status !== "PAID")
+      return res.status(403).json({
+        ok: false,
+        error: "Payment has not been confirmed. Receipt PDF is unavailable until this invoice is recorded as paid.",
+      });
+    const pdf = await renderDocPdf(req, "receipt", ref);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="Receipt-${ref}.pdf"`,
+    });
+    res.send(pdf);
+  } catch (err) {
+    console.error("Receipt PDF failed:", err.message);
+    res.status(500).json({ ok: false, error: "Could not generate the receipt PDF." });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -317,7 +430,7 @@ if (fs.existsSync(clientDist)) {
 connectDb().then(() => {
   const server = app.listen(PORT, () => {
   console.log(`KSPVIB verification server running → http://localhost:${PORT}`);
-  console.log(`  API:  GET /api/invoices | POST /api/invoices | GET /api/verify/:ref   |   GET /api/receipt/:ref`);
+  console.log(`  API:  GET /api/invoices | POST /api/invoices | GET /api/verify/:ref | GET /api/receipt/:ref | GET /api/invoice/:ref/pdf | GET /api/receipt/:ref/pdf`);
 });
 
 server.on("error", err => {

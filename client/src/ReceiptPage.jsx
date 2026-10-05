@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchReceipt, money, fmtDate } from "./api.js";
+import { fetchReceipt, money, fmtDate, downloadDocPdf } from "./api.js";
 import QrCode from "./QrCode.jsx";
 import logo from "./assets/KSPVIB.jpg.jpeg";
 
@@ -45,7 +45,10 @@ export default function ReceiptPage() {
   return (
     <div className="doc-page">
       <div className="printbar">
-        <button onClick={() => window.print()}>Print / Save receipt as PDF</button>
+        <button onClick={() => downloadDocPdf("receipt", ref)}>
+          Download PDF
+        </button>
+        <button onClick={() => window.print()}>Print</button>
         <a href="/verify">← Back to verification</a>
       </div>
       <article className="doc-paper receipt-doc">
@@ -88,27 +91,33 @@ function Receipt(props) {
           <div>Receipt for</div>
           <div className="no">{r.invoiceNumber}</div>
           <div>Paid: {fmtDate(r.paidDate)}</div>
-          <span className="paid">✓ PAID</span>
+          <span className="pill paid">PAID</span>
         </div>
       </div>
       <div className="boxes">
-        <Box cap="RECEIVED FROM" val={r.school} sub={r.state} />
+        <div className="box">
+          <div className="cap">RECEIVED FROM</div>
+          <div className="val school">{r.school}</div>
+          <div className="sub">LGA: {r.lga || "—"}</div>
+          <div className="sub">School Grade: {r.grade || "—"}</div>
+          <div className="sub">Term: {r.term || "—"}</div>
+        </div>
         <Box cap="CATEGORY" val={r.category} />
         <Box cap="PROPRIETOR" val={r.proprietor} />
       </div>
       <table>
         <thead>
           <tr>
-            <th>#</th>
+            <th className="col-idx">#</th>
             <th>DESCRIPTION</th>
-            <th>AMOUNT</th>
+            <th className="col-amt">AMOUNT</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>1</td>
             <td>{r.description}</td>
-            <td>{money(r.amount)}</td>
+            <td className="amt">{money(r.amount)}</td>
           </tr>
         </tbody>
       </table>
@@ -121,27 +130,31 @@ function Receipt(props) {
           Thank you for your payment.
           <br />
           Keep this receipt for your records.
-          <br />
-          <br />
-          Kano State Ministry of Education
-          <br />
-          Private and Voluntary Institutions Board (KSPVIB)
+          <div className="verify-link">
+            <a href={verifyUrl}>Verify Payment Status</a>
+          </div>
+          <div className="foot-note">
+            Kano State Ministry of Education
+            <br />
+            Private and Voluntary Institutions Board (KSPVIB)
+          </div>
         </div>
         <div className="qr-block">
-          <QrCode value={verifyUrl ? new URL(verifyUrl, window.location.origin).href : ""} />
-          <div className="verify-url">Scan to verify this payment: {verifyUrl}</div>
+          <QrCode value={verifyUrl} />
+          <a className="verify-url" href={verifyUrl}>
+            Verify Invoice
+          </a>
         </div>
       </div>
     </>
   );
 }
 
-function Box({ cap, val, sub }) {
+function Box({ cap, val }) {
   return (
     <div className="box">
       <div className="cap">{cap}</div>
       <div className="val">{val}</div>
-      {sub && <div className="sub">{sub}</div>}
     </div>
   );
 }
