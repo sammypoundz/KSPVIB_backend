@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { verifyInvoice, money, fmtDate } from "./api.js";
+import { verifyInvoice, money, fmtDate, downloadDocPdf } from "./api.js";
 import { navigate, useRoute } from "./router.jsx";
 
 const DEMOS = [
@@ -55,10 +55,9 @@ export default function App() {
   return (
     <div className="layout">
       <main className="page hero">
-        <h1>Invoice Verification</h1>
-        <p className="lead">
-          Confirm the authenticity and payment status of an invoice issued by
-          the Kano State Private and Voluntary Institutions Board.
+        <h1 className="portal-title">KANO STATE GOVERNMENT</h1>
+        <p className="portal-subtitle">
+          Voluntary and Private Education Portal - Invoice Verification
         </p>
 
         <section className="card">
@@ -109,13 +108,13 @@ export default function App() {
 
             {invoice && (
               <>
-                <div className="result-head">
-                  <div className="invoice-no">{invoice.invoiceNumber}</div>
-                  <div className={`status ${paid ? "paid" : "unpaid"}`}>
-                    {paid ? "✓ PAID" : "UNPAID"}
-                  </div>
-                </div>
                 <div className="details">
+                  <div className="result-head detail-head">
+                    <div className="invoice-no">{invoice.invoiceNumber}</div>
+                    <div className={`status ${paid ? "paid" : "unpaid"}`}>
+                      {paid ? "Paid" : "Unpaid"}
+                    </div>
+                  </div>
                   <Detail k="School" v={invoice.school} />
                   <Detail k="Payment type" v={invoice.paymentType} />
                   <Detail k="Amount" v={money(invoice.amount)} />
@@ -123,40 +122,33 @@ export default function App() {
                   {paid && <Detail k="Paid" v={fmtDate(invoice.paidDate)} />}
                 </div>
                 <div className="actions">
-                  <a
-                    className="action secondary"
-                    href={`/invoice?inv=${encodeURIComponent(invoice.invoiceNumber)}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(
-                        `/invoice?inv=${encodeURIComponent(invoice.invoiceNumber)}`,
-                      );
-                    }}
-                  >
-                    Print invoice
-                  </a>
-                  <a
-                    className={`action primary ${receiptAvailable ? "" : "disabled"}`}
-                    href={
-                      receiptAvailable
-                        ? `/receipt?inv=${encodeURIComponent(invoice.invoiceNumber)}`
-                        : "#"
-                    }
-                    onClick={(e) => {
-                      if (!receiptAvailable) {
+                  {paid && receiptAvailable ? (
+                    <a
+                      className="action primary"
+                      href={`/receipt?inv=${encodeURIComponent(invoice.invoiceNumber)}`}
+                      onClick={(e) => {
                         e.preventDefault();
-                        return;
-                      }
-                      e.preventDefault();
-                      navigate(
-                        `/receipt?inv=${encodeURIComponent(invoice.invoiceNumber)}`,
-                      );
-                    }}
-                  >
-                    {receiptAvailable
-                      ? "Download receipt"
-                      : "Receipt unavailable until payment"}
-                  </a>
+                        navigate(
+                          `/receipt?inv=${encodeURIComponent(invoice.invoiceNumber)}`,
+                        );
+                      }}
+                    >
+                      Download receipt
+                    </a>
+                  ) : (
+                    <a
+                      className="action neutral"
+                      href={`/invoice?inv=${encodeURIComponent(invoice.invoiceNumber)}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(
+                          `/invoice?inv=${encodeURIComponent(invoice.invoiceNumber)}`,
+                        );
+                      }}
+                    >
+                      View invoice
+                    </a>
+                  )}
                 </div>
                 {!paid && (
                   <div className="notice">
@@ -168,29 +160,10 @@ export default function App() {
             )}
           </div>
         </section>
-
-        <ul className="features">
-          <li>
-            <strong>Instant check</strong>
-            <span>
-              Status is verified against the official records in real time.
-            </span>
-          </li>
-          <li>
-            <strong>Official receipts</strong>
-            <span>Download receipts only after payment is confirmed.</span>
-          </li>
-          <li>
-            <strong>Secure by design</strong>
-            <span>
-              Status comes from the server — never from the QR code itself.
-            </span>
-          </li>
-        </ul>
       </main>
 
       <footer>
-        This page confirms invoices issued through the Kano State VPE Portal.
+        This page confirms an invoice issued by the Kano State VPE Portal.
         <br />
         Kano State Ministry of Education · KSPVIB
       </footer>

@@ -76,10 +76,10 @@ body {
   margin: 0 auto 26px;
 }
 .doc-paper.receipt-doc {
-  border-top: 8px solid var(--green);
+  border-top: 0;
 }
 .doc-paper.invoice-doc {
-  border-top: 8px solid var(--dark);
+  border-top: 0;
 }
 .logo-placeholder {
   display: none;
@@ -138,6 +138,14 @@ h1 {
   line-height: 1.55;
   font-size: 16.5px;
 }
+.portal-title {
+  color: #1a7f37;
+  font-weight: 800;
+}
+.portal-subtitle {
+  color: #8492a6;
+  margin: 0 auto 34px;
+}
 
 /* card */
 .card {
@@ -159,7 +167,6 @@ label {
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.6px;
-  text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 12px;
 }
@@ -241,6 +248,11 @@ button:disabled {
   gap: 14px;
   margin-bottom: 24px;
 }
+.detail-head {
+  margin-bottom: 0;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
 .invoice-no {
   font-size: 20px;
   font-weight: 800;
@@ -250,8 +262,9 @@ button:disabled {
   padding: 8px 17px;
   border-radius: 999px;
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 500;
   letter-spacing: 0.9px;
+  text-transform: uppercase;
 }
 .status.paid {
   background: #dcf9e8;
@@ -263,7 +276,7 @@ button:disabled {
 }
 .details {
   display: grid;
-  gap: 14px;
+  gap: 18px;
   background: #f8fafc;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -272,7 +285,7 @@ button:disabled {
 .detail {
   display: grid;
   grid-template-columns: 130px 1fr;
-  gap: 16px;
+  gap: 18px;
   font-size: 15.5px;
   align-items: baseline;
 }
@@ -281,10 +294,11 @@ button:disabled {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.4px;
-  text-transform: uppercase;
 }
 .detail .v {
   font-weight: 700;
+  justify-self: end;
+  text-align: right;
 }
 .actions {
   display: flex;
@@ -311,6 +325,14 @@ button:disabled {
 }
 .primary:hover {
   background: var(--green-deep);
+  color: #fff;
+}
+.neutral {
+  background: #8492a6;
+  color: #fff;
+}
+.neutral:hover {
+  background: #6b7a90;
   color: #fff;
 }
 .secondary {
@@ -571,7 +593,7 @@ footer {
   font-weight: 750;
   color: #087c3f;
   margin-top: 8px;
-  text-decoration: underline;
+  text-decoration: none;
 }
 .pill {
   display: inline-block;
@@ -596,7 +618,7 @@ footer {
   font-size: 12px;
   font-weight: 750;
   color: #087c3f;
-  text-decoration: underline;
+  text-decoration: none;
 }
 .verify-link a {
   display: inline-block;
@@ -652,6 +674,18 @@ footer {
   .bottom {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+  /* centre the verification link under the QR code on print */
+  .qr-block {
+    align-items: center;
+    text-align: center;
+  }
+  .verify-url {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 }
 @media (max-width: 640px) {
@@ -770,7 +804,7 @@ footer {
   color: #fff;
 }
 .hero {
-  text-align: left;
+  text-align: center;
   margin-bottom: 26px;
 }
 .hero h1 {
@@ -930,4 +964,91 @@ footer {
   .nav {
     flex-wrap: wrap;
   }
+}
+
+/* Term selection checkboxes (create invoice) */
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dark);
+  cursor: pointer;
+  margin-bottom: 0;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.checkbox-item input {
+  width: 17px;
+  height: 17px;
+  accent-color: #13864a;
+  cursor: pointer;
+}
+
+/* ===== Admin login ===== */
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.login-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin: 0 auto;
+}
+.login-card h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+.login-card .lead {
+  margin: 0;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  text-align: left;
+}
+.login-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.login-btn {
+  width: 100%;
+  padding: 0.7rem;
+}
+.login-hint {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+.login-hint code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+.nav-logout {
+  color: #b3261e;
 }

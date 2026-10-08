@@ -1,4 +1,11 @@
 ◇ injected env (0) from .env
-(node:25900) ExperimentalWarning: CommonJS module C:\Users\gambo\Downloads\KSPVIB_invoice_verification_prototype (1)\server.js is loading ES Module C:\Users\gambo\Downloads\KSPVIB_invoice_verification_prototype (1)\node_modules\puppeteer\lib\puppeteer\puppeteer.js using require().
+(node:11056) ExperimentalWarning: CommonJS module C:\Users\gambo\Downloads\KSPVIB_invoice_verification_prototype (1)\server.js is loading ES Module C:\Users\gambo\Downloads\KSPVIB_invoice_verification_prototype (1)\node_modules\puppeteer\lib\puppeteer\puppeteer.js using require().
 Support for loading ES Module in require() is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
+PDF browser launch failed for C:\Users\gambo\.cache\puppeteer\chrome\win64-154.0.8037.57\chrome-win64\chrome.exe: Failed to launch the browser process:  Code: 2147483651
+
+stderr:
+
+
+TROUBLESHOOTING: https://pptr.dev/troubleshooting
+

@@ -1,4 +1,11 @@
 // Small API client — talks to the Express backend
+import { getToken } from "./auth.js";
+
+// Authorization header for admin endpoints (JWT)
+const authHeaders = () => {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
 export async function verifyInvoice(ref) {
   const res = await fetch(`/api/verify/${encodeURIComponent(ref)}`);
   const data = await res.json();
@@ -7,7 +14,7 @@ export async function verifyInvoice(ref) {
 }
 
 export async function fetchInvoices() {
-  const res = await fetch("/api/invoices");
+  const res = await fetch("/api/invoices", { headers: authHeaders() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Could not load invoices.");
   return data;
@@ -16,7 +23,7 @@ export async function fetchInvoices() {
 export async function createInvoice(payload) {
   const res = await fetch("/api/invoices", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
   });
   const data = await res.json();
@@ -27,6 +34,7 @@ export async function createInvoice(payload) {
 export async function markInvoicePaid(ref) {
   const res = await fetch(`/api/invoices/${encodeURIComponent(ref)}/pay`, {
     method: "POST",
+    headers: authHeaders(),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Could not mark invoice as paid.");

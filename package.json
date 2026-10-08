@@ -13,9 +13,11 @@
     "build": "npm --prefix client install && npm --prefix client run build"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "concurrently": "^9.2.4",
     "dotenv": "^18.0.4",
     "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.6.0",
     "puppeteer": "^25.12.0",
     "qrcode": "^1.5.4"

@@ -1,15 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import ReceiptPage from "./ReceiptPage.jsx";
 import DashboardPage from "./DashboardPage.jsx";
 import CreateInvoicePage from "./CreateInvoicePage.jsx";
 import InvoicePage from "./InvoicePage.jsx";
+import LoginPage from "./LoginPage.jsx";
 import Shell from "./Shell.jsx";
-import { useRoute } from "./router.jsx";
+import { useRoute, navigate } from "./router.jsx";
+import { checkAuth, onAuthChange } from "./auth.js";
 import "./styles.css";
 
 function Page({ path }) {
+  if (path === "/login") return <LoginPage />;
   if (path === "/receipt") return <ReceiptPage />;
   if (path === "/invoice") return <InvoicePage />;
   if (path === "/create") return <CreateInvoicePage />;
@@ -18,12 +21,31 @@ function Page({ path }) {
 }
 
 function Root() {
-  const path = useRoute(); // re-renders on every navigation (back/forward too)
-  // Receipt/print page renders standalone (print-friendly); everything else lives in the shell
-  return path === "/receipt" || path === "/invoice" ? (
-    <Page path={path} />
-  ) : (
+  const path = useRoute();
+  // null = still validating the token; user object = signed in; false = not
+  const [admin, setAdmin] = React.useState(null);
+
+  // Validate the stored JWT against the server on mount and after login/logout
+  const refresh = React.useCallback(() => {
+    checkAuth().then((user) => setAdmin(user || false));
+  }, []);
+  useEffect(refresh, [refresh]);
+  useEffect(() => onAuthChange(refresh), [refresh]);
+
+  // Admin-only routes require login — bounce to /login otherwise
+  useEffect(() => {
+    const needsAdmin = path === "/" || path === "/create";
+    if (needsAdmin && admin === false) navigate("/login");
+  }, [path, admin]);
+
+  // Nav bar logic: admin sees the nav everywhere (verify/receipt/invoice
+  // included); the public sees standalone pages without the nav.
+  const isAdminView = !!admin && path !== "/login";
+  if (admin === null) return null; // validating token — render nothing yet
+  return isAdminView ? (
     <Shell>{<Page path={path} />}</Shell>
+  ) : (
+    <Page path={path} />
   );
 }
 

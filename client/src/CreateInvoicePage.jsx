@@ -42,12 +42,20 @@ export default function CreateInvoicePage() {
     amount: "",
     lga: "Nasarawa",
     grade: "Grade B",
-    term: "First Term",
+    terms: ["First Term"],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  const toggleTerm = (t) =>
+    setForm((f) => ({
+      ...f,
+      terms: f.terms.includes(t)
+        ? f.terms.filter((x) => x !== t)
+        : [...f.terms, t],
+    }));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -61,7 +69,7 @@ export default function CreateInvoicePage() {
         amount: Number(form.amount),
         lga: form.lga,
         grade: form.grade,
-        term: form.term,
+        terms: form.terms,
       });
       navigate(`/verify?inv=${encodeURIComponent(data.invoice.invoiceNumber)}`);
     } catch (err) {
@@ -88,7 +96,7 @@ export default function CreateInvoicePage() {
             <input
               id="school"
               required
-              placeholder="e.g. PRIVATE SCHOOL TEST II"
+              placeholder="e.g. Private School Test II"
               value={form.school}
               onChange={set("school")}
             />
@@ -151,12 +159,19 @@ export default function CreateInvoicePage() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="term">Term</label>
-            <select id="term" value={form.term} onChange={set("term")}>
+            <label>Term</label>
+            <div className="checkbox-group">
               {TERMS.map((t) => (
-                <option key={t}>{t}</option>
+                <label key={t} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={form.terms.includes(t)}
+                    onChange={() => toggleTerm(t)}
+                  />
+                  <span>{t}</span>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
           <div className="field submit-field">
             <button className="primary" type="submit" disabled={loading}>

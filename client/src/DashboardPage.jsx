@@ -88,9 +88,7 @@ export default function DashboardPage() {
                     <td className="row-actions">
                       <button
                         className="secondary"
-                        onClick={() =>
-                          navigate(`/verify?inv=${inv.invoiceNumber}`)
-                        }
+                        onClick={() => navigate(`/verify?inv=${inv.invoiceNumber}`)}
                       >
                         Verify
                       </button>

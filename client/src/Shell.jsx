@@ -1,5 +1,6 @@
 import React from "react";
 import { navigate, useRoute } from "./router.jsx";
+import { logout, notifyAuthChange } from "./auth.js";
 import logo from "./assets/KSPVIB.jpg.jpeg";
 
 // Shared app shell — sticky top bar + nav, wrapping every page
@@ -30,12 +31,19 @@ export default function Shell({ children }) {
           <NavButton href="/">Dashboard</NavButton>
           <NavButton href="/create">Create Invoice</NavButton>
           <NavButton href="/verify">Verify Invoice</NavButton>
+          <button
+            className="nav-btn nav-logout"
+            onClick={async () => {
+              await logout();
+              notifyAuthChange();
+              navigate("/login");
+            }}
+          >
+            Logout
+          </button>
         </nav>
       </header>
       <main className="page">{children}</main>
-      <footer>
-        Kano State Ministry of Education · KSPVIB — Invoice &amp; Payment Portal
-      </footer>
     </div>
   );
 }

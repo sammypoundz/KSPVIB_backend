@@ -3,6 +3,8 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { MongoClient } = require("mongodb");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,13 +32,14 @@ async function connectDb() {
     await db
       .collection("invoices")
       .createIndex({ invoiceNumber: 1 }, { unique: true });
+    await ensureDefaultAdmin();
     // seed demo invoices if the collection is empty
     const count = await db.collection("invoices").countDocuments();
     if (count === 0) {
       await db.collection("invoices").insertMany([
         {
           invoiceNumber: "INV-2026-0001",
-          school: "PRIVATE SCHOOL TEST II",
+          school: "Private School Test II",
           lga: "Nassarawa",
           grade: "Grade B",
           term: "First Term",
@@ -51,7 +54,7 @@ async function connectDb() {
         },
         {
           invoiceNumber: "INV-2026-0004",
-          school: "PRIVATE SCHOOL TEST II",
+          school: "Private School Test II",
           lga: "Nassarawa",
           grade: "Grade B",
           term: "First Term",
@@ -90,10 +93,14 @@ const DESCRIPTIONS = {
   Other: "Other Fee",
 };
 
+// Title Case: capitalize the first letter of each word (keeps rest as typed)
+const titleCase = (s) =>
+  String(s || "").replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+
 const clean = (inv) =>
   inv && {
     invoiceNumber: inv.invoiceNumber,
-    school: inv.school,
+    school: titleCase(inv.school),
     lga: inv.lga || "—",
     grade: inv.grade || "—",
     term: inv.term || "—",
@@ -163,12 +170,87 @@ async function nextReceiptNumber(inv) {
 }
 
 // ---------------------------------------------------------------------------
-// API
+// Auth — JWT + admin users stored in MongoDB ("admin_users" collection)
 // ---------------------------------------------------------------------------
+const JWT_SECRET =
+  process.env.JWT_SECRET || "kspvib-dev-secret-change-me-in-production";
+const JWT_EXPIRES = process.env.JWT_EXPIRES || "8h";
+
+// Default admin, seeded into the DB on first run:
+//   email: admin@kspvib.gov.ng / password: admin123
+async function ensureDefaultAdmin() {
+  const email = "admin@kspvib.gov.ng";
+  const users = db.collection("admin_users");
+  const existing = await users.findOne({ email });
+  if (!existing) {
+    await users.insertOne({
+      email,
+      name: "KSPVIB Admin",
+      role: "admin",
+      passwordHash: await bcrypt.hash("admin123", 10),
+      createdAt: new Date(),
+    });
+    console.log(`✓ Seeded default admin → ${email} / admin123`);
+  }
+}
+
+function signToken(user) {
+  return jwt.sign(
+    { sub: user.email, name: user.name, role: user.role },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES },
+  );
+}
+
+// Middleware — verifies "Authorization: Bearer <token>"
+function requireAuth(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ ok: false, error: "Not authenticated." });
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ ok: false, error: "Session expired. Please sign in again." });
+  }
+}
+
 app.use(express.json());
 
-// GET /api/invoices — dashboard list + stats
-app.get("/api/invoices", async (req, res) => {
+// POST /api/auth/login — exchange credentials for a JWT
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!db)
+      return res.status(503).json({ ok: false, error: "Database unavailable." });
+    const user = await db
+      .collection("admin_users")
+      .findOne({ email: String(email || "").trim().toLowerCase() });
+    if (!user || !(await bcrypt.compare(String(password || ""), user.passwordHash)))
+      return res.status(401).json({ ok: false, error: "Invalid email or password." });
+    res.json({ ok: true, token: signToken(user), user: { email: user.email, name: user.name, role: user.role } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: "Login failed." });
+  }
+});
+
+// GET /api/auth/me — validate a token, return the current admin
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  res.json({ ok: true, user: { email: req.user.sub, name: req.user.name, role: req.user.role } });
+});
+
+// POST /api/auth/logout — stateless JWT: client just discards the token
+app.post("/api/auth/logout", (req, res) => {
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
+// API
+// ---------------------------------------------------------------------------
+
+// GET /api/invoices — dashboard list + stats (admin only)
+app.get("/api/invoices", requireAuth, async (req, res) => {
   try {
     const list = (await allInvoices()).map(clean);
     res.json({
@@ -189,8 +271,8 @@ app.get("/api/invoices", async (req, res) => {
   }
 });
 
-// POST /api/invoices — create a new invoice
-app.post("/api/invoices", async (req, res) => {
+// POST /api/invoices — create a new invoice (admin only)
+app.post("/api/invoices", requireAuth, async (req, res) => {
   try {
     const {
       school,
@@ -199,6 +281,7 @@ app.post("/api/invoices", async (req, res) => {
       amount,
       lga,
       grade,
+      terms,
       term,
     } = req.body || {};
     if (!school || !String(school).trim())
@@ -212,10 +295,16 @@ app.post("/api/invoices", async (req, res) => {
     const category = paymentType || "Other";
     const inv = {
       invoiceNumber,
-      school: String(school).trim().toUpperCase(),
+      school: String(school).trim(),
       lga: lga ? String(lga).trim() : "—",
       grade: grade ? String(grade).trim() : "—",
-      term: term ? String(term).trim() : "—",
+      // accept an array of selected terms (checkboxes); fall back to a
+      // single "term" string for older clients
+      term: Array.isArray(terms)
+        ? terms.map((t) => String(t).trim()).filter(Boolean).join(", ")
+        : term
+        ? String(term).trim()
+        : "—",
       paymentType: category,
       description: descriptions[category] || "Other Fee",
       amount: amt,
@@ -237,8 +326,8 @@ app.post("/api/invoices", async (req, res) => {
   }
 });
 
-// POST /api/invoices/:ref/pay — mark an invoice as paid (demo payment workflow)
-app.post("/api/invoices/:ref/pay", async (req, res) => {
+// POST /api/invoices/:ref/pay — mark an invoice as paid (admin only)
+app.post("/api/invoices/:ref/pay", requireAuth, async (req, res) => {
   try {
     const inv = await findInvoice(req.params.ref);
     if (!inv)
@@ -331,16 +420,31 @@ const puppeteer = require("puppeteer");
 let pdfBrowser = null;
 async function getPdfBrowser() {
   if (!pdfBrowser) {
-    pdfBrowser = await puppeteer.launch({
-      args: ["--no-sandbox"],
-      // Prefer an explicitly configured Chrome (PUPPETEER_EXECUTABLE_PATH),
-      // then the system Chrome/Edge. On Render/Linux the bundled Chromium is
-      // used automatically when none of these are set.
-      executablePath:
-        process.env.PUPPETEER_EXECUTABLE_PATH ||
-        puppeteer.executablePath() ||
-        undefined,
-    });
+    // Resolve the Chromium path. In recent Puppeteer versions
+    // executablePath() returns a Promise, so always await it (awaiting a
+    // plain string is a no-op). Falls back to system Chrome/Edge when the
+    // bundled Chromium cannot launch (e.g. corrupted cache / ICU data).
+    let exe = process.env.PUPPETEER_EXECUTABLE_PATH || null;
+    if (!exe) {
+      exe = await Promise.resolve(puppeteer.executablePath()).catch(() => null);
+    }
+    const fallbacks = [
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    ];
+    pdfBrowser = null;
+    for (const candidate of [exe, ...fallbacks].filter(Boolean)) {
+      try {
+        pdfBrowser = await puppeteer.launch({
+          args: ["--no-sandbox"],
+          executablePath: candidate,
+        });
+        break;
+      } catch (err) {
+        console.error(`PDF browser launch failed for ${candidate}: ${err.message}`);
+      }
+    }
+    if (!pdfBrowser) throw new Error("No usable browser for PDF generation.");
   }
   return pdfBrowser;
 }

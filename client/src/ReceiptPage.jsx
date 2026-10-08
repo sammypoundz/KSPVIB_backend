@@ -142,7 +142,7 @@ function Receipt(props) {
         <div className="qr-block">
           <QrCode value={verifyUrl} />
           <a className="verify-url" href={verifyUrl}>
-            Verify Invoice
+            {verifyUrl}
           </a>
         </div>
       </div>
