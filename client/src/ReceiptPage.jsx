@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { fetchReceipt, money, fmtDate, downloadDocPdf } from "./api.js";
 import QrCode from "./QrCode.jsx";
-import logo from "./assets/KSPVIB.jpg.jpeg";
+import logo from "./assets/3.png";
+import logo1 from "./assets/1.png";
+import logo2 from "./assets/2.png";
 
 export default function ReceiptPage() {
   const ref =
@@ -11,6 +13,7 @@ export default function ReceiptPage() {
     error: null,
     receipt: null,
     verifyUrl: null,
+    downloading: false,
   });
 
   useEffect(() => {
@@ -45,8 +48,20 @@ export default function ReceiptPage() {
   return (
     <div className="doc-page">
       <div className="printbar">
-        <button onClick={() => downloadDocPdf("receipt", ref)}>
-          Download PDF
+        <button
+          disabled={state.downloading}
+          onClick={async () => {
+            try {
+              setState((s) => ({ ...s, downloading: true }));
+              await downloadDocPdf("receipt", ref);
+            } catch (err) {
+              alert(`Download failed: ${err.message}`);
+            } finally {
+              setState((s) => ({ ...s, downloading: false }));
+            }
+          }}
+        >
+          {state.downloading ? "Preparing…" : "Download PDF"}
         </button>
         <button onClick={() => window.print()}>Print</button>
         <a href="/verify">← Back to verification</a>
@@ -71,7 +86,11 @@ function Receipt(props) {
   return (
     <>
       <div className="rhead">
-        <img className="logo-img" src={logo} alt="KSPVIB logo" />
+        <div className="logo-row">
+          <img className="logo-img" src={logo2} alt="Ministry of Education logo" />
+          <img className="logo-img" src={logo} alt="KSPVIB logo" />
+          <img className="logo-img" src={logo1} alt="Kano State Government logo" />
+        </div>
         <div className="gov">KANO STATE GOVERNMENT</div>
         <div className="ministry">MINISTRY OF EDUCATION</div>
         <div className="board">
@@ -130,9 +149,6 @@ function Receipt(props) {
           Thank you for your payment.
           <br />
           Keep this receipt for your records.
-          <div className="verify-link">
-            <a href={verifyUrl}>Verify Payment Status</a>
-          </div>
           <div className="foot-note">
             Kano State Ministry of Education
             <br />

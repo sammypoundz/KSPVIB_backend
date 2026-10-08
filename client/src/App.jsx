@@ -137,7 +137,7 @@ export default function App() {
                     </a>
                   ) : (
                     <a
-                      className="action neutral"
+                      className="action primary"
                       href={`/invoice?inv=${encodeURIComponent(invoice.invoiceNumber)}`}
                       onClick={(e) => {
                         e.preventDefault();

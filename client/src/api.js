@@ -50,8 +50,29 @@ export async function fetchReceipt(ref) {
 
 // Downloads the server-generated PDF (headless Chromium, headers/footers
 // stripped) — identical layout to the on-screen preview and browser print.
-export function downloadDocPdf(kind, ref) {
-  window.location.href = `/api/${kind}/${encodeURIComponent(ref)}/pdf`;
+// Uses fetch + blob so failures surface as a thrown error (the caller can
+// show a notice) instead of silently navigating to an error page.
+export async function downloadDocPdf(kind, ref) {
+  const url = `/api/${kind}/${encodeURIComponent(ref)}/pdf`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    let msg = "Could not generate the PDF.";
+    try {
+      const data = await res.json();
+      if (data.error) msg = data.error;
+    } catch {
+      // non-JSON error body
+    }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${kind === "receipt" ? "Receipt" : "Invoice"}-${ref}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
 }
 
 export const money = (n) =>
