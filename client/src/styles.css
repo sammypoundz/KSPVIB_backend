@@ -500,7 +500,10 @@ footer {
 }
 .boxes {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  /* three FIXED columns — left (customer), centre (category), right
+     (proprietor). minmax(0,…) lets long values wrap inside their own
+     column instead of pushing into a neighbour. */
+  grid-template-columns: 1.4fr 1fr 1.1fr;
   background: #f6f7f9;
   border-radius: 18px;
   padding: 14px;
@@ -509,27 +512,41 @@ footer {
 .box {
   padding: 0 20px;
   border-right: 1px solid #e0e4ea;
-  min-width: 0;
+  min-width: 0; /* let content wrap within the column, never spill over */
+  overflow-wrap: break-word;
 }
 .box:last-child {
   border: 0;
 }
-.box .val.school {
-  overflow-wrap: anywhere;
-}
-.cap {
+/* keep the heading and ALL of its values locked to the same column:
+   no value can ever break out horizontally, and the three headings
+   always share the same top baseline because every .box starts at the
+   same grid row with identical heading height. */
+.box .cap {
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 1px;
   color: #7a8290;
+  white-space: nowrap;
 }
 .box .val {
   font-weight: 800;
   margin-top: 8px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 .sub {
   color: #788393;
   margin-top: 5px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+/* category term line — deliberately NOT bold */
+.cat-sub {
+  font-weight: 400;
+  margin-top: 4px;
 }
 .doc-paper table {
   width: 100%;
@@ -630,6 +647,23 @@ footer {
   background: #dff8e9;
   color: #087c3f;
 }
+/* check icon on a solid green circle, inside the PAID pill */
+.check-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #087c3f;
+  color: #fff;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.check-badge svg {
+  width: 10px;
+  height: 10px;
+}
 .pill.unpaid {
   background: #fde5e8;
   color: #b21e2d;
@@ -640,8 +674,15 @@ footer {
   display: inline-block;
   margin-top: 8px;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 400;
   color: #687589; /* same grey as the .thanks text */
+  text-decoration: none;
+}
+/* small label above the verification link under the QR code */
+.qr-caption {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #687589;
   text-decoration: none;
 }
 .verify-link a {
@@ -653,7 +694,34 @@ footer {
   text-decoration: underline;
 }
 .foot-note {
-  margin-top: 14px;
+  /* keep the KSPVIB footer a QR-code's height below the receipt text,
+     nudged up slightly to sit near the bottom of the QR block */
+  margin-top: calc(var(--qr-size, 170px) - 30px);
+}
+
+/* dashboard pagination controls */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 14px 16px;
+  border-top: 1px solid #e6e9ef;
+}
+.pagination .page-info {
+  font-size: 14px;
+  color: #43506a;
+}
+.pagination .muted {
+  color: #8b95a7;
+}
+.pagination select {
+  padding: 6px 10px;
+  border: 1px solid #d6dbe4;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
 }
 
 @media print {

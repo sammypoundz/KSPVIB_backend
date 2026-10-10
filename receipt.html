@@ -96,7 +96,7 @@ function render(r, verifyUrl) {
       <div class="meta"><div>Receipt for</div><div class="no">${esc(r.invoiceNumber)}</div><div>Paid: ${esc(r.paidDate)}</div><span class="paid">\u2713 PAID</span></div>
     </div>
     <div class="boxes">
-      <div class="box"><div class="cap">RECEIVED FROM</div><div class="val">${esc(r.school)}</div><div class="sub">${esc(r.state)}</div></div>
+      <div class="box"><div class="cap">RECEIVED FROM</div><div class="val">${esc(r.school)}</div><div class="sub">${esc(r.address !== "—" ? r.address : "")}</div><div class="sub">Ungogo, ${esc(r.state)}</div></div>
       <div class="box"><div class="cap">CATEGORY</div><div class="val">${esc(r.category)}</div></div>
       <div class="box"><div class="cap">PROPRIETOR</div><div class="val">${esc(r.proprietor)}</div></div>
     </div>

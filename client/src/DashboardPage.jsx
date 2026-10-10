@@ -7,17 +7,27 @@ export default function DashboardPage() {
     loading: true,
     error: null,
     data: null,
+    page: 1,
+    limit: 10,
   });
 
-  const load = () => {
-    fetchInvoices()
-      .then((data) => setState({ loading: false, error: null, data }))
+  const load = (page = state.page, limit = state.limit) => {
+    setState((s) => ({ ...s, loading: true, page, limit }));
+    fetchInvoices(page, limit)
+      .then((data) =>
+        setState((s) => ({ ...s, loading: false, error: null, data })),
+      )
       .catch((err) =>
-        setState({ loading: false, error: err.message, data: null }),
+        setState((s) => ({
+          ...s,
+          loading: false,
+          error: err.message,
+          data: null,
+        })),
       );
   };
 
-  useEffect(load, []);
+  useEffect(() => load(state.page, state.limit), []);
 
   const { data } = state;
 
@@ -112,6 +122,44 @@ export default function DashboardPage() {
                 ))}
               </tbody>
             </table>
+            {data.pagination && (
+              <div className="pagination">
+                <button
+                  className="secondary"
+                  disabled={data.pagination.page <= 1 || state.loading}
+                  onClick={() => load(data.pagination.page - 1)}
+                >
+                  ← Prev
+                </button>
+                <span className="page-info">
+                  Page {data.pagination.page} of {data.pagination.totalPages}
+                  <span className="muted">
+                    {" "}· {data.pagination.totalItems} invoices
+                  </span>
+                </span>
+                <button
+                  className="secondary"
+                  disabled={
+                    data.pagination.page >= data.pagination.totalPages ||
+                    state.loading
+                  }
+                  onClick={() => load(data.pagination.page + 1)}
+                >
+                  Next →
+                </button>
+                <select
+                  value={state.limit}
+                  disabled={state.loading}
+                  onChange={(e) => load(1, Number(e.target.value))}
+                >
+                  {[10, 25, 50].map((n) => (
+                    <option key={n} value={n}>
+                      {n} / page
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </section>
         </>
       )}

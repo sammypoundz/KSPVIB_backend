@@ -21,6 +21,31 @@ const DB_NAME = process.env.MONGODB_DB || "KSPVIB";
 let db = null; // set when connected; null → in-memory fallback
 const memoryInvoices = {}; // fallback store if Mongo is unreachable
 
+// One-time fix-up: stamp the demo invoices with the correct school, category
+// and proprietor details (older records were seeded without these fields).
+const DEMO_DATA = {
+  school: "HAMISU SIDI KABO SCHOOL",
+  address: "GWARZO ROAD",
+  lga: "Ungogo",
+  state: "Kano State",
+  grade: "Grade C",
+  session: "2026/2027",
+  term: "First Term",
+  category: "Private (Grade C)",
+  proprietor: "ALI AUWAL",
+  phone: "08062821735",
+  email: "aliahmad@gmail.com",
+};
+
+async function applyDemoDataFix() {
+  await db
+    .collection("invoices")
+    .updateMany(
+      { invoiceNumber: { $in: ["INV-2026-0001", "INV-2026-0004"] } },
+      { $set: DEMO_DATA },
+    );
+}
+
 async function connectDb() {
   try {
     const client = new MongoClient(MONGODB_URI, {
@@ -33,16 +58,20 @@ async function connectDb() {
       .collection("invoices")
       .createIndex({ invoiceNumber: 1 }, { unique: true });
     await ensureDefaultAdmin();
+    await applyDemoDataFix();
     // seed demo invoices if the collection is empty
     const count = await db.collection("invoices").countDocuments();
     if (count === 0) {
       await db.collection("invoices").insertMany([
         {
           invoiceNumber: "INV-2026-0001",
-          school: "Private School Test II",
-          lga: "Nassarawa",
-          grade: "Grade B",
+          school: "HAMISU SIDI KABO SCHOOL",
+          address: "GWARZO ROAD",
+          lga: "Ungogo",
+          state: "Kano State",
+          grade: "Grade C",
           term: "First Term",
+          category: "Private (Grade C)",
           paymentType: "Renewal",
           description: "Renewal fee",
           amount: 100,
@@ -50,14 +79,19 @@ async function connectDb() {
           status: "PAID",
           paidDate: "2026-09-15",
           receiptNumber: "RCP-2026-0001",
-          proprietor: "—",
+          proprietor: "ALI AUWAL",
+          phone: "08062821735",
+          email: "aliahmad@gmail.com",
         },
         {
           invoiceNumber: "INV-2026-0004",
-          school: "Private School Test II",
-          lga: "Nassarawa",
-          grade: "Grade B",
+          school: "HAMISU SIDI KABO SCHOOL",
+          address: "GWARZO ROAD",
+          lga: "Ungogo",
+          state: "Kano State",
+          grade: "Grade C",
           term: "First Term",
+          category: "Private (Grade C)",
           paymentType: "Registration",
           description: "Registration fee",
           amount: 150,
@@ -65,7 +99,9 @@ async function connectDb() {
           status: "UNPAID",
           paidDate: null,
           receiptNumber: null,
-          proprietor: "—",
+          proprietor: "ALI AUWAL",
+          phone: "08062821735",
+          email: "aliahmad@gmail.com",
         },
       ]);
     }
@@ -89,7 +125,7 @@ const DESCRIPTIONS = {
   "Examination Fee": "Examination Fee",
   Accreditation: "Accreditation Fee",
   Fees: "Fees",
-  "Tax Fee": "Tax Fee",
+  Tax: "Tax",
   Other: "Other Fee",
 };
 
@@ -102,7 +138,10 @@ const clean = (inv) =>
     invoiceNumber: inv.invoiceNumber,
     school: titleCase(inv.school),
     lga: inv.lga || "—",
+    // Kano State is permanent — all records in this project are Kano records
+    state: inv.state || "Kano State",
     grade: inv.grade || "—",
+    session: inv.session || "—",
     term: inv.term || "—",
     paymentType: inv.paymentType,
     description: inv.description,
@@ -111,6 +150,10 @@ const clean = (inv) =>
     status: inv.status,
     paidDate: inv.paidDate,
     proprietor: inv.proprietor,
+    category: inv.category || "—",
+    phone: inv.phone || "—",
+    email: inv.email || "—",
+    address: inv.address || "—",
   };
 
 // Absolute origin used for QR codes / verification links so that generated
@@ -253,9 +296,21 @@ app.post("/api/auth/logout", (req, res) => {
 app.get("/api/invoices", requireAuth, async (req, res) => {
   try {
     const list = (await allInvoices()).map(clean);
+    // optional pagination: ?page=1&limit=10 (limit <= 100, page >= 1)
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 0, 1), 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const totalItems = list.length;
+    const totalPages = limit ? Math.max(Math.ceil(totalItems / limit), 1) : 1;
+    const safePage = Math.min(page, totalPages);
+    const invoices = limit
+      ? list.slice((safePage - 1) * limit, safePage * limit)
+      : list;
     res.json({
       ok: true,
-      invoices: list,
+      invoices,
+      pagination: limit
+        ? { page: safePage, limit, totalItems, totalPages }
+        : null,
       stats: {
         total: list.length,
         paid: list.filter((i) => i.status === "PAID").length,
@@ -277,12 +332,17 @@ app.post("/api/invoices", requireAuth, async (req, res) => {
     const {
       school,
       proprietor,
+      category,
       paymentType,
       amount,
       lga,
       grade,
+      session,
       terms,
       term,
+      phone,
+      email,
+      address,
     } = req.body || {};
     if (!school || !String(school).trim())
       return res.status(400).json({ ok: false, error: "Received From is required." });
@@ -292,12 +352,20 @@ app.post("/api/invoices", requireAuth, async (req, res) => {
 
     const invoiceNumber = await nextInvoiceNumber();
     const descriptions = DESCRIPTIONS;
-    const category = paymentType || "Other";
+    // category = school type (Private / Voluntary); paymentType drives the
+    // line-item description. Kept in paymentType for backwards compatibility.
+    const schoolCategory =
+      category ||
+      (paymentType === "Private" || paymentType === "Community-Based"
+        ? paymentType
+        : "Private");
+    const payType = paymentType && DESCRIPTIONS[paymentType] ? paymentType : "Other";
     const inv = {
       invoiceNumber,
       school: String(school).trim(),
       lga: lga ? String(lga).trim() : "—",
       grade: grade ? String(grade).trim() : "—",
+      session: session ? String(session).trim() : "—",
       // accept an array of selected terms (checkboxes); fall back to a
       // single "term" string for older clients
       term: Array.isArray(terms)
@@ -305,14 +373,18 @@ app.post("/api/invoices", requireAuth, async (req, res) => {
         : term
         ? String(term).trim()
         : "—",
-      paymentType: category,
-      description: descriptions[category] || "Other Fee",
+      category: schoolCategory,
+      paymentType: payType,
+      description: descriptions[payType] || "Other Fee",
       amount: amt,
       issued: new Date().toISOString().slice(0, 10),
       status: "UNPAID",
       paidDate: null,
       receiptNumber: null,
       proprietor: proprietor ? String(proprietor).trim() : "—",
+      phone: phone ? String(phone).trim() : "—",
+      email: email ? String(email).trim() : "—",
+      address: address ? String(address).trim() : "—",
     };
     if (db) {
       await db.collection("invoices").insertOne(inv);
@@ -397,12 +469,18 @@ app.get("/api/receipt/:ref", async (req, res) => {
       invoiceNumber: inv.invoiceNumber,
       receiptNumber: inv.receiptNumber,
       school: inv.school,
-      state: inv.state,
-      category: inv.paymentType,
+      lga: inv.lga || "—",
+      // Kano State is permanent — all records in this project are Kano records
+      state: inv.state || "Kano State",
+      address: inv.address || "—",
+      category: inv.category || inv.paymentType,
+      session: inv.session || "—",
+      paymentType: inv.paymentType,
       proprietor: inv.proprietor,
       description: inv.description,
       amount: inv.amount,
       paidDate: inv.paidDate,
+      phone: inv.phone || "—",
     },
     verifyUrl: `${docOrigin(req)}/verify?inv=${encodeURIComponent(inv.invoiceNumber)}`,
   });

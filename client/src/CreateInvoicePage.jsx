@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { createInvoice } from "./api.js";
 import { navigate } from "./router.jsx";
 
-const CATEGORIES = [
+const CATEGORIES = ["Private", "Community-Based"];
+const PAYMENT_TYPES = [
   "Tuition Fees",
   "Registration",
   "Renewal",
   "Examination Fee",
   "Accreditation",
-  "Fees",
-  "Tax Fee",
+  "Tax",
   "Other",
 ];
 const DESCRIPTIONS = {
@@ -18,8 +18,7 @@ const DESCRIPTIONS = {
   Renewal: "Renewal Fee",
   "Examination Fee": "Examination Fee",
   Accreditation: "Accreditation Fee",
-  Fees: "Fees",
-  "Tax Fee": "Tax Fee",
+  Tax: "Tax",
   Other: "Other Fee",
 };
 
@@ -38,11 +37,16 @@ export default function CreateInvoicePage() {
   const [form, setForm] = useState({
     school: "",
     proprietor: "",
+    category: "Private",
+    session: "",
     paymentType: "Tuition Fees",
     amount: "",
     lga: "Nasarawa",
     grade: "Grade B",
     terms: ["First Term"],
+    phone: "",
+    email: "",
+    address: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -65,11 +69,16 @@ export default function CreateInvoicePage() {
       const data = await createInvoice({
         school: form.school.trim(),
         proprietor: form.proprietor.trim(),
+        category: form.category,
+        session: form.session.trim(),
         paymentType: form.paymentType,
         amount: Number(form.amount),
         lga: form.lga,
         grade: form.grade,
         terms: form.terms,
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        address: form.address.trim(),
       });
       navigate(`/verify?inv=${encodeURIComponent(data.invoice.invoiceNumber)}`);
     } catch (err) {
@@ -85,7 +94,7 @@ export default function CreateInvoicePage() {
         <h1>Create Invoice</h1>
         <p className="lead">
           Enter the invoice data. The description is derived from the selected
-          category.
+          payment type.
         </p>
       </div>
 
@@ -111,16 +120,26 @@ export default function CreateInvoicePage() {
             />
           </div>
           <div className="field">
-            <label htmlFor="category">Category / Payment Type</label>
+            <label htmlFor="category">Category</label>
             <select
               id="category"
-              value={form.paymentType}
-              onChange={set("paymentType")}
+              value={form.category}
+              onChange={set("category")}
             >
               {CATEGORIES.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
+          </div>
+          <div className="field">
+            <label htmlFor="session">Session</label>
+            <input
+              id="session"
+              type="text"
+              placeholder="e.g. 2026/2027"
+              value={form.session}
+              onChange={set("session")}
+            />
           </div>
           <div className="field">
             <label htmlFor="amount">Amount (₦)</label>
@@ -135,11 +154,52 @@ export default function CreateInvoicePage() {
             />
           </div>
           <div className="field">
+            <label htmlFor="paymentType">Payment Type</label>
+            <select
+              id="paymentType"
+              value={form.paymentType}
+              onChange={set("paymentType")}
+            >
+              {PAYMENT_TYPES.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
             <label htmlFor="description">Description</label>
             <input
               id="description"
               readOnly
-              value={DESCRIPTIONS[form.paymentType]}
+              value={DESCRIPTIONS[form.paymentType] || "Other Fee"}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="phone">Phone Number</label>
+            <input
+              id="phone"
+              type="tel"
+              placeholder="e.g. 0803 000 0000"
+              value={form.phone}
+              onChange={set("phone")}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              placeholder="e.g. school@example.com"
+              value={form.email}
+              onChange={set("email")}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="address">School Address</label>
+            <input
+              id="address"
+              placeholder="e.g. 12 Zoo Road, Kano"
+              value={form.address}
+              onChange={set("address")}
             />
           </div>
           <div className="field">

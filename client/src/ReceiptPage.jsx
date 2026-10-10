@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { fetchReceipt, money, fmtDate, downloadDocPdf } from "./api.js";
 import QrCode from "./QrCode.jsx";
 import logo from "./assets/3.png";
@@ -15,6 +15,7 @@ export default function ReceiptPage() {
     verifyUrl: null,
     downloading: false,
   });
+  const docRef = useRef(null); // .doc-paper element captured into the PDF
 
   useEffect(() => {
     let alive = true;
@@ -53,7 +54,7 @@ export default function ReceiptPage() {
           onClick={async () => {
             try {
               setState((s) => ({ ...s, downloading: true }));
-              await downloadDocPdf("receipt", ref);
+              await downloadDocPdf("receipt", ref, docRef.current);
             } catch (err) {
               alert(`Download failed: ${err.message}`);
             } finally {
@@ -66,7 +67,7 @@ export default function ReceiptPage() {
         <button onClick={() => window.print()}>Print</button>
         <a href="/verify">← Back to verification</a>
       </div>
-      <article className="doc-paper receipt-doc">
+      <article className="doc-paper receipt-doc" ref={docRef}>
         {state.loading && <div className="notice">Loading receipt…</div>}
         {state.error && (
           <div className="notice">
@@ -110,19 +111,48 @@ function Receipt(props) {
           <div>Receipt for</div>
           <div className="no">{r.invoiceNumber}</div>
           <div>Paid: {fmtDate(r.paidDate)}</div>
-          <span className="pill paid">PAID</span>
+          <span className="pill paid">
+            <span className="check-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>{" "}
+            PAID
+          </span>
         </div>
       </div>
       <div className="boxes">
         <div className="box">
           <div className="cap">RECEIVED FROM</div>
           <div className="val school">{r.school}</div>
-          <div className="sub">LGA: {r.lga || "—"}</div>
-          <div className="sub">School Grade: {r.grade || "—"}</div>
-          <div className="sub">Term: {r.term || "—"}</div>
+          {r.address && r.address !== "—" && (
+            <div className="sub">{r.address}</div>
+          )}
+          {r.lga && r.lga !== "—" && (
+            <div className="sub">{`${r.lga} LGA`}</div>
+          )}
+          {/* Kano State is permanent on every receipt */}
+          <div className="sub">{r.state || "Kano State"}</div>
         </div>
-        <Box cap="CATEGORY" val={r.category} />
-        <Box cap="PROPRIETOR" val={r.proprietor} />
+        <Box cap="CATEGORY" val={r.category || "—"}   sub={
+            [
+              r.session && r.session !== "—" ? r.session : null,
+              r.term && r.term !== "—" ? r.term : null,
+            ]
+              .filter(Boolean)
+              .join(" – ") || null
+          }
+        />
+        <div className="box">
+          <div className="cap">PROPRIETOR</div>
+          <div className="val">{r.proprietor || "—"}</div>
+          {r.phone && r.phone !== "—" && (
+            <div className="sub">{r.phone}</div>
+          )}
+          {r.email && r.email !== "—" && (
+            <div className="sub">{r.email}</div>
+          )}
+        </div>
       </div>
       <table>
         <thead>
@@ -157,6 +187,7 @@ function Receipt(props) {
         </div>
         <div className="qr-block">
           <QrCode value={verifyUrl} />
+          <div className="qr-caption">Scan to verify</div>
           <a className="verify-url" href={verifyUrl}>
             {verifyUrl}
           </a>
@@ -166,11 +197,12 @@ function Receipt(props) {
   );
 }
 
-function Box({ cap, val }) {
+function Box({ cap, val, sub }) {
   return (
     <div className="box">
       <div className="cap">{cap}</div>
       <div className="val">{val}</div>
+      {sub && <div className="sub cat-sub">{sub}</div>}
     </div>
   );
 }

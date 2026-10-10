@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { verifyInvoice, money, fmtDate, downloadDocPdf } from "./api.js";
 import QrCode from "./QrCode.jsx";
 import logo from "./assets/3.png";
@@ -17,6 +17,7 @@ export default function InvoicePage() {
     verifyUrl: null,
     downloading: false,
   });
+  const docRef = useRef(null); // .doc-paper element captured into the PDF
 
   useEffect(() => {
     let alive = true;
@@ -55,7 +56,7 @@ export default function InvoicePage() {
           onClick={async () => {
             try {
               setState((s) => ({ ...s, downloading: true }));
-              await downloadDocPdf("invoice", ref);
+              await downloadDocPdf("invoice", ref, docRef.current);
             } catch (err) {
               alert(`Download failed: ${err.message}`);
             } finally {
@@ -68,7 +69,7 @@ export default function InvoicePage() {
         <button onClick={() => window.print()}>Print</button>
         <a href="/verify">← Back to verification</a>
       </div>
-      <article className="doc-paper invoice-doc">
+      <article className="doc-paper invoice-doc" ref={docRef}>
         {state.loading && <div className="notice">Loading invoice…</div>}
         {state.error && (
           <div className="notice">
@@ -121,12 +122,40 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
         <div className="box">
           <div className="cap">BILLED TO</div>
           <div className="val school">{inv.school}</div>
-          <div className="sub">LGA: {inv.lga || "—"}</div>
-          <div className="sub">School Grade: {inv.grade || "—"}</div>
-          <div className="sub">Term: {inv.term || "—"}</div>
+          {inv.address && inv.address !== "—" && (
+            <div className="sub">{inv.address}</div>
+          )}
+          {inv.lga && inv.lga !== "—" && (
+            <div className="sub">{`${inv.lga} LGA`}</div>
+          )}
+          {/* Kano State is permanent on every invoice */}
+          <div className="sub">{inv.state || "Kano State"}</div>
         </div>
-        <Box cap="CATEGORY" val={inv.paymentType} />
-        <Box cap="PROPRIETOR" val={inv.proprietor || "—"} />
+        <Box
+          cap="CATEGORY"
+          val={
+            (inv.category && inv.category !== "—" ? inv.category : "—") +
+            (inv.grade && inv.grade !== "—" ? ` (${inv.grade})` : "")
+          }
+          sub={
+            [
+              inv.session && inv.session !== "—" ? inv.session : null,
+              inv.term && inv.term !== "—" ? inv.term : null,
+            ]
+              .filter(Boolean)
+              .join(" – ") || null
+          }
+        />
+        <div className="box">
+          <div className="cap">PROPRIETOR</div>
+          <div className="val">{inv.proprietor || "—"}</div>
+          {inv.phone && inv.phone !== "—" && (
+            <div className="sub">{inv.phone}</div>
+          )}
+          {inv.email && inv.email !== "—" && (
+            <div className="sub">{inv.email}</div>
+          )}
+        </div>
       </div>
       <table>
         <thead>
@@ -150,9 +179,9 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
       </div>
       <div className="bottom">
         <div className="thanks">
-          Make payment through the KSPVIB portal.
+          This invoice is non-refundable.
           <br />
-          A receipt becomes available once payment is confirmed.
+          Keep a copy of this invoice for your records.
           <div className="foot-note">
             Kano State Ministry of Education
             <br />
@@ -161,6 +190,7 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
         </div>
         <div className="qr-block">
           <QrCode value={verifyUrl} />
+          <div className="qr-caption">Scan to verify</div>
           <a className="verify-url" href={verifyUrl}>
             {verifyUrl}
           </a>
@@ -170,11 +200,12 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
   );
 }
 
-function Box({ cap, val }) {
+function Box({ cap, val, sub }) {
   return (
     <div className="box">
       <div className="cap">{cap}</div>
       <div className="val">{val}</div>
+      {sub && <div className="sub cat-sub">{sub}</div>}
     </div>
   );
 }
