@@ -69,10 +69,6 @@ export default function LoginPage() {
               </div>
             )}
           </form>
-          <div className="login-hint">
-            Default credentials (prototype): <code>admin@kspvib.gov.ng</code>{" "}
-            / <code>admin123</code>
-          </div>
         </section>
       </main>
     </div>

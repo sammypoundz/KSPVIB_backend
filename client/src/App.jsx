@@ -2,11 +2,6 @@ import React, { useState, useEffect } from "react";
 import { verifyInvoice, money, fmtDate, downloadDocPdf } from "./api.js";
 import { navigate, useRoute } from "./router.jsx";
 
-const DEMOS = [
-  { ref: "INV-2026-0001", label: "INV-2026-0001 · Paid" },
-  { ref: "INV-2026-0004", label: "INV-2026-0004 · Unpaid" },
-];
-
 export default function App() {
   const [ref, setRef] = useState(
     new URLSearchParams(window.location.search).get("inv") || "",
@@ -81,21 +76,6 @@ export default function App() {
               <button type="submit" disabled={loading}>
                 {loading ? "Verifying…" : "Verify"}
               </button>
-            </div>
-            <div className="hints">
-              {DEMOS.map((d) => (
-                <button
-                  type="button"
-                  key={d.ref}
-                  className="chip"
-                  onClick={() => {
-                    setRef(d.ref);
-                    verify(d.ref);
-                  }}
-                >
-                  {d.label}
-                </button>
-              ))}
             </div>
           </form>
 
