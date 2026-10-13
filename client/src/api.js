@@ -1,13 +1,20 @@
 // Small API client — talks to the Express backend
 import { getToken } from "./auth.js";
 
+// Base URL of the backend. Set VITE_API_URL in client/.env when hosting the
+// frontend and backend on separate servers, e.g.:
+//   VITE_API_URL=https://your-backend.onrender.com
+// Leave it unset in dev — the Vite proxy (vite.config.js) forwards /api to
+// localhost:3000, so everything keeps working locally.
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
 // Authorization header for admin endpoints (JWT)
 const authHeaders = () => {
   const t = getToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 export async function verifyInvoice(ref) {
-  const res = await fetch(`/api/verify/${encodeURIComponent(ref)}`);
+  const res = await fetch(`${API_BASE}/api/verify/${encodeURIComponent(ref)}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Invoice not found.");
   return data;
@@ -15,14 +22,14 @@ export async function verifyInvoice(ref) {
 
 export async function fetchInvoices(page = 1, limit = 10) {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
-  const res = await fetch(`/api/invoices?${qs}`, { headers: authHeaders() });
+  const res = await fetch(`${API_BASE}/api/invoices?${qs}`, { headers: authHeaders() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Could not load invoices.");
   return data;
 }
 
 export async function createInvoice(payload) {
-  const res = await fetch("/api/invoices", {
+  const res = await fetch(`${API_BASE}/api/invoices`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
@@ -33,7 +40,7 @@ export async function createInvoice(payload) {
 }
 
 export async function markInvoicePaid(ref) {
-  const res = await fetch(`/api/invoices/${encodeURIComponent(ref)}/pay`, {
+  const res = await fetch(`${API_BASE}/api/invoices/${encodeURIComponent(ref)}/pay`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -43,7 +50,7 @@ export async function markInvoicePaid(ref) {
 }
 
 export async function fetchReceipt(ref) {
-  const res = await fetch(`/api/receipt/${encodeURIComponent(ref)}`);
+  const res = await fetch(`${API_BASE}/api/receipt/${encodeURIComponent(ref)}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Receipt unavailable.");
   return data;

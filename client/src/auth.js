@@ -16,11 +16,15 @@ export function clearToken() {
 
 // Asks the server whether the stored token is valid. Resolves to the user
 // object or null (never throws).
+
+// Same base URL as api.js — the backend's origin when hosted separately.
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
 export async function checkAuth() {
   const token = getToken();
   if (!token) return null;
   try {
-    const res = await fetch("/api/auth/me", {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
@@ -36,7 +40,7 @@ export async function checkAuth() {
 
 // POST /api/auth/login — throws on bad credentials
 export async function login(email, password) {
-  const res = await fetch("/api/auth/login", {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -49,7 +53,7 @@ export async function login(email, password) {
 
 export async function logout() {
   try {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch(`${API_BASE}/api/auth/logout`, { method: "POST" });
   } catch {
     // stateless JWT — ignoring network errors is fine
   }

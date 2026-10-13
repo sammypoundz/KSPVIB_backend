@@ -1,13 +1,40 @@
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const { MongoClient } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
+// ---------------------------------------------------------------------------
+// CORS — required when the frontend is hosted on a different server/domain.
+// Set ALLOWED_ORIGINS in .env, e.g.:
+//   ALLOWED_ORIGINS=https://your-frontend.onrender.com,https://kspvib.com
+// Falls back to allowing any origin if unset (fine for a prototype; lock it
+// down for production).
+// ---------------------------------------------------------------------------
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      // allow requests with no Origin header (curl, server-to-server) and any
+      // origin on the allowlist
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Not allowed by CORS"));
+      }
+    },
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // MongoDB connection

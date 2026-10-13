@@ -1,9 +1,10 @@
 services:
+  # Backend API only — the frontend is deployed separately as a static site.
   - type: web
-    name: kspvib-invoice-verification
+    name: kspvib-api
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
@@ -12,3 +13,13 @@ services:
         sync: false # set this in the Render dashboard: your MongoDB Atlas connection string
       - key: MONGODB_DB
         value: KSPVIB
+      # Origins of the frontend that may call this API (comma-separated).
+      # Set this in the Render dashboard to your frontend's URL, e.g.
+      # https://kspvib.netlify.app
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Public URL of this backend — used to build absolute PDF/QR links.
+      # Replace with the URL Render assigns to this service, e.g.
+      # https://kspvib-api.onrender.com
+      - key: PUBLIC_BASE_URL
+        sync: false
