@@ -5,6 +5,12 @@ import logo from "./assets/3.png";
 import logo1 from "./assets/1.png";
 import logo2 from "./assets/2.png";
 
+// The verification link/QR must point at the site the document is viewed on,
+// not at whatever the backend returned (it may fall back to its own URL when
+// FRONTEND_URL is unset). Build it from the page's own origin instead.
+const localVerifyUrl = (invRef) =>
+  `${window.location.origin}/verify?inv=${encodeURIComponent(invRef)}`;
+
 // Printable invoice document — opened at /invoice?inv=INV-....
 // Includes a QR code that links to the verification page so anyone holding the
 // printed copy can scan it to confirm authenticity and payment status.
@@ -28,7 +34,7 @@ export default function InvoicePage() {
           setState({
             loading: false,
             invoice: data.invoice,
-            verifyUrl: data.verifyUrl,
+            verifyUrl: localVerifyUrl(ref),
           }),
       )
       .catch(

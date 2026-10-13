@@ -5,6 +5,12 @@ import logo from "./assets/3.png";
 import logo1 from "./assets/1.png";
 import logo2 from "./assets/2.png";
 
+// The verification link/QR must point at the site the document is viewed on,
+// not at whatever the backend returned (it may fall back to its own URL when
+// FRONTEND_URL is unset). Build it from the page's own origin instead.
+const localVerifyUrl = (invRef) =>
+  `${window.location.origin}/verify?inv=${encodeURIComponent(invRef)}`;
+
 export default function ReceiptPage() {
   const ref =
     new URLSearchParams(window.location.search).get("inv") || "INV-2026-0001";
@@ -26,7 +32,7 @@ export default function ReceiptPage() {
           setState({
             loading: false,
             receipt: data.receipt,
-            verifyUrl: data.verifyUrl,
+            verifyUrl: localVerifyUrl(ref),
           }),
       )
       .catch(
