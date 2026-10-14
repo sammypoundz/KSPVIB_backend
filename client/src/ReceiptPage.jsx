@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { fetchReceipt, money, fmtDate, downloadDocPdf } from "./api.js";
+import { checkAuth } from "./auth.js";
 import QrCode from "./QrCode.jsx";
 import logo from "./assets/3.png";
 import logo1 from "./assets/1.png";
@@ -20,6 +21,7 @@ export default function ReceiptPage() {
     receipt: null,
     verifyUrl: null,
     downloading: false,
+    isAdmin: false, // admins additionally see Print / back link
   });
   const docRef = useRef(null); // .doc-paper element captured into the PDF
 
@@ -29,14 +31,18 @@ export default function ReceiptPage() {
       .then(
         (data) =>
           alive &&
-          setState({
+          // functional update — never clobber the isAdmin flag set by checkAuth()
+          setState((s) => ({
+            ...s,
             loading: false,
             receipt: data.receipt,
             verifyUrl: localVerifyUrl(ref),
-          }),
+          })),
       )
       .catch(
-        (err) => alive && setState({ loading: false, error: err.message }),
+        (err) =>
+          alive &&
+          setState((s) => ({ ...s, loading: false, error: err.message })),
       );
     return () => {
       alive = false;
@@ -52,26 +58,42 @@ export default function ReceiptPage() {
         : "Receipt — KSPVIB";
   }, [state]);
 
+  // Everyone gets the Download button; signed-in admins also get Print and
+  // the back link. External visitors scanning the QR just download the PDF.
+  useEffect(() => {
+    let alive = true;
+    checkAuth().then((user) => alive && setState((s) => ({ ...s, isAdmin: !!user })));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <div className="doc-page">
+      {/* Everyone gets a Download button; Print / back link are admin-only —
+          external visitors scanning the QR just download the receipt */}
       <div className="printbar">
         <button
-          disabled={state.downloading}
-          onClick={async () => {
-            try {
-              setState((s) => ({ ...s, downloading: true }));
-              await downloadDocPdf("receipt", ref, docRef.current);
-            } catch (err) {
-              alert(`Download failed: ${err.message}`);
-            } finally {
-              setState((s) => ({ ...s, downloading: false }));
-            }
-          }}
-        >
-          {state.downloading ? "Preparing…" : "Download PDF"}
-        </button>
-        <button onClick={() => window.print()}>Print</button>
-        <a href="/verify">← Back to verification</a>
+            disabled={state.downloading}
+            onClick={async () => {
+              try {
+                setState((s) => ({ ...s, downloading: true }));
+                await downloadDocPdf("receipt", ref, docRef.current);
+              } catch (err) {
+                alert(`Download failed: ${err.message}`);
+              } finally {
+                setState((s) => ({ ...s, downloading: false }));
+              }
+            }}
+          >
+            {state.downloading ? "Preparing…" : "Download PDF"}
+          </button>
+        {state.isAdmin && (
+          <>
+            <button onClick={() => window.print()}>Print</button>
+            <a href="/verify">← Back to verification</a>
+          </>
+        )}
       </div>
       <article className="doc-paper receipt-doc" ref={docRef}>
         {state.loading && <div className="notice">Loading receipt…</div>}
@@ -201,7 +223,7 @@ function Receipt(props) {
         </div>
       </div>
       {/* bottom-right receipt number — value comes from the existing data flow */}
-      <div className="doc-ref">Receipt No. {r.invoiceNumber}</div>
+      <div className="doc-ref">{r.invoiceNumber}</div>
     </>
   );
 }

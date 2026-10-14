@@ -86,12 +86,7 @@ const DEMO_DATA = {
 };
 
 async function applyDemoDataFix() {
-  await db
-    .collection("invoices")
-    .updateMany(
-      { invoiceNumber: { $in: ["INV-2026-0001", "INV-2026-0004"] } },
-      { $set: DEMO_DATA },
-    );
+  // Demo data removed — no auto-fix on startup.
 }
 
 async function connectDb() {
@@ -106,53 +101,10 @@ async function connectDb() {
       .collection("invoices")
       .createIndex({ invoiceNumber: 1 }, { unique: true });
     await ensureDefaultAdmin();
-    await applyDemoDataFix();
-    // seed demo invoices if the collection is empty
-    const count = await db.collection("invoices").countDocuments();
-    if (count === 0) {
-      await db.collection("invoices").insertMany([
-        {
-          invoiceNumber: "INV-2026-0001",
-          school: "HAMISU SIDI KABO SCHOOL",
-          address: "GWARZO ROAD",
-          lga: "Ungogo",
-          state: "Kano State",
-          grade: "Grade C",
-          term: "First Term",
-          category: "Private (Grade C)",
-          paymentType: "Renewal",
-          description: "Renewal fee",
-          amount: 100,
-          issued: "2026-09-15",
-          status: "PAID",
-          paidDate: "2026-09-15",
-          receiptNumber: "RCP-2026-0001",
-          proprietor: "ALI AUWAL",
-          phone: "08062821735",
-          email: "aliahmad@gmail.com",
-        },
-        {
-          invoiceNumber: "INV-2026-0004",
-          school: "HAMISU SIDI KABO SCHOOL",
-          address: "GWARZO ROAD",
-          lga: "Ungogo",
-          state: "Kano State",
-          grade: "Grade C",
-          term: "First Term",
-          category: "Private (Grade C)",
-          paymentType: "Registration",
-          description: "Registration fee",
-          amount: 150,
-          issued: "2026-09-16",
-          status: "UNPAID",
-          paidDate: null,
-          receiptNumber: null,
-          proprietor: "ALI AUWAL",
-          phone: "08062821735",
-          email: "aliahmad@gmail.com",
-        },
-      ]);
-    }
+    // Wipe all invoice data on startup; admin logins are preserved.
+    const cleared = await db.collection("invoices").deleteMany({});
+    if (cleared.deletedCount > 0)
+      console.log(`✓ Cleared ${cleared.deletedCount} invoice(s) from DB`);
     console.log(`✓ Connected to MongoDB → db "${DB_NAME}"`);
   } catch (err) {
     db = null;
