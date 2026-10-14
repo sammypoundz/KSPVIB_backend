@@ -13,6 +13,9 @@
   --muted: #64748b;
   --bg: #eef2f7;
   --line: #e6eaf0;
+  /* centralized receipt template measurements (receipt doc only — the
+     invoice still renders its own QR size) */
+  --receipt-qr-size: 120px; /* ≈90pt on A4 */
 }
 body {
   margin: 0;
@@ -576,9 +579,12 @@ footer {
 .doc-paper .col-amt {
   width: 26%;
 }
+.receipt-doc {
+  --qr-size: var(--receipt-qr-size); /* scoping token to the receipt document */
+}
 .doc-paper .amt {
   white-space: nowrap;
-  font-weight: 700;
+  font-weight: 500; /* right-aligned but deliberately not bold */
 }
 .total {
   margin-top: 14px;
@@ -601,6 +607,8 @@ footer {
   align-items: flex-end;
   gap: 30px;
   margin-top: 22px;
+  /* stretch to the full printable width so the QR block sits on the extreme end */
+  width: 100%;
 }
 .thanks {
   color: #687589;
@@ -627,6 +635,7 @@ footer {
   flex-direction: column;
   align-items: center;
   margin-left: auto; /* push QR + link to the right edge */
+  margin-right: -24px; /* cancel the doc's inner padding so the QR sits on the extreme end */
   flex-shrink: 0;
 }
 .verify-url {
@@ -696,7 +705,17 @@ footer {
 .foot-note {
   /* keep the KSPVIB footer a QR-code's height below the receipt text,
      nudged up slightly to sit near the bottom of the QR block */
-  margin-top: calc(var(--qr-size, 170px) - 30px);
+  margin-top: calc(var(--qr-size) - 30px);
+}
+
+/* bottom-right receipt number in the footer zone (receipt only) */
+.doc-ref {
+  text-align: right;
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.4px;
+  color: #687589;
 }
 
 /* dashboard pagination controls */
@@ -771,6 +790,7 @@ footer {
   .qr-block {
     align-items: center;
     text-align: center;
+    margin-right: 0; /* print has no doc padding — reset the screen offset */
   }
   .verify-url {
     display: block;

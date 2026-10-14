@@ -165,7 +165,7 @@ function Receipt(props) {
           <tr>
             <th className="col-idx">#</th>
             <th>DESCRIPTION</th>
-            <th className="col-amt">AMOUNT</th>
+            <th className="col-amt">AMOUNT (₦)</th>
           </tr>
         </thead>
         <tbody>
@@ -192,13 +192,16 @@ function Receipt(props) {
           </div>
         </div>
         <div className="qr-block">
-          <QrCode value={verifyUrl} />
+          {/* ~90pt at 96dpi — fixed square, generated from the live verify URL */}
+          <QrCode value={verifyUrl} size={120} />
           <div className="qr-caption">Scan to verify</div>
           <a className="verify-url" href={verifyUrl}>
             {verifyUrl}
           </a>
         </div>
       </div>
+      {/* bottom-right receipt number — value comes from the existing data flow */}
+      <div className="doc-ref">Receipt No. {r.invoiceNumber}</div>
     </>
   );
 }

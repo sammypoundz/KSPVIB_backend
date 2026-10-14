@@ -19,18 +19,31 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .map((s) => s.trim().replace(/\/$/, ""))
   .filter(Boolean);
 
+// In development the Vite dev server (localhost) must always be able to reach
+// the backend, even when ALLOWED_ORIGINS is set for production hosts.
+const isDev = process.env.NODE_ENV !== "production";
+const devOrigins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173", "http://127.0.0.1:4173"];
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(
   cors({
     origin(origin, cb) {
-      // allow requests with no Origin header (curl, server-to-server) and any
-      // origin on the allowlist
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      // allow requests with no Origin header (curl, server-to-server), any
+      // origin on the allowlist, and localhost dev origins when not in production
+      if (
+        !origin ||
+        allowedOrigins.length === 0 ||
+        allowedOrigins.includes(origin) ||
+        (isDev && devOrigins.includes(origin))
+      ) {
         cb(null, true);
       } else {
-        cb(new Error("Not allowed by CORS"));
+        // Reject WITHOUT an Error — an Error here makes Express return a 500
+        // on the OPTIONS preflight. cb(null, false) simply omits the CORS
+        // headers, so the browser reports a normal CORS failure instead.
+        cb(null, false);
       }
     },
   }),
@@ -40,6 +53,14 @@ app.use(
 // MongoDB connection
 // ---------------------------------------------------------------------------
 const PDF_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+// Origin of the FRONTEND that hosts the /verify page — used for the
+// "Scan to verify" links/QR codes printed on invoices and receipts.
+// Falls back to PUBLIC_BASE_URL (single-server mode).
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL ||
+  process.env.PUBLIC_BASE_URL ||
+  ""
+).replace(/\/$/, "");
 const MONGODB_URI =
   process.env.MONGODB_URI ||
   "mongodb+srv://KSPVIB_User:KSPVIB_Pswrd@cluster0.di9abps.mongodb.net/KSPVIB?retryWrites=true&w=majority&appName=Cluster0";
@@ -183,10 +204,12 @@ const clean = (inv) =>
     address: inv.address || "—",
   };
 
-// Absolute origin used for QR codes / verification links so that generated
-// documents point at the production verification page, never a dev URL.
+// Absolute origin used for the "verify" links/QR codes so that generated
+// documents point at the production verification page on the FRONTEND server,
+// never a dev URL. PDF links use the backend's own origin.
 function docOrigin(req) {
   return (
+    FRONTEND_URL ||
     PDF_BASE_URL ||
     `${req.protocol}://${req.get("host") || `localhost:${PORT}`}`
   );
