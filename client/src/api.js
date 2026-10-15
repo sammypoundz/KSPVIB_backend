@@ -68,13 +68,31 @@ export async function downloadDocPdf(kind, ref, docEl) {
     import("html2canvas-pro"),
     import("jspdf"),
   ]);
-  const canvas = await html2canvas(docEl, {
-    scale: 2, // crisp text
-    useCORS: true, // allow same-origin images (logos)
-    backgroundColor: "#ffffff",
-    windowWidth: docEl.scrollWidth,
-    windowHeight: docEl.scrollHeight,
-  });
+  // Force a desktop-width render for the capture: on phones the element is
+  // squeezed by the viewport, which would produce a narrow, mobile-styled
+  // PDF. Pin the element to its desktop width and capture at a desktop
+  // viewport so desktop media-query styles apply, then restore the inline
+  // styles afterwards.
+  const DESKTOP_W = 860; // matches .doc-paper max-width
+  const prev = {
+    width: docEl.style.width,
+    maxWidth: docEl.style.maxWidth,
+  };
+  docEl.style.width = `${DESKTOP_W}px`;
+  docEl.style.maxWidth = "none";
+  let canvas;
+  try {
+    canvas = await html2canvas(docEl, {
+      scale: 2, // crisp text
+      useCORS: true, // allow same-origin images (logos)
+      backgroundColor: "#ffffff",
+      windowWidth: DESKTOP_W + 40, // desktop viewport → desktop styles
+      windowHeight: docEl.scrollHeight + 40,
+    });
+  } finally {
+    docEl.style.width = prev.width;
+    docEl.style.maxWidth = prev.maxWidth;
+  }
   const imgData = canvas.toDataURL("image/jpeg", 0.95);
   // A4 at 96dpi in mm
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });

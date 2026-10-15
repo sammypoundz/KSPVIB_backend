@@ -101,11 +101,11 @@ async function connectDb() {
       .collection("invoices")
       .createIndex({ invoiceNumber: 1 }, { unique: true });
     await ensureDefaultAdmin();
-    // Wipe all invoice data on startup; admin logins are preserved.
-    const cleared = await db.collection("invoices").deleteMany({});
-    if (cleared.deletedCount > 0)
-      console.log(`✓ Cleared ${cleared.deletedCount} invoice(s) from DB`);
-    console.log(`✓ Connected to MongoDB → db "${DB_NAME}"`);
+    // Invoice data PERSISTS across restarts — no wipe on startup.
+    const count = await db.collection("invoices").countDocuments({});
+    console.log(
+      `✓ Connected to MongoDB → db "${DB_NAME}" (${count} invoice(s) on file)`,
+    );
   } catch (err) {
     db = null;
     console.error(
@@ -125,7 +125,7 @@ const DESCRIPTIONS = {
   "Examination Fee": "Examination Fee",
   Accreditation: "Accreditation Fee",
   Fees: "Fees",
-  Tax: "Tax",
+  Tax: "Tax Fee",
   Other: "Other Fee",
 };
 
@@ -478,6 +478,8 @@ app.get("/api/receipt/:ref", async (req, res) => {
       category: inv.category || inv.paymentType,
       session: inv.session || "—",
       paymentType: inv.paymentType,
+      // terms paid for — shown in the CATEGORY box alongside the session
+      term: inv.term || "—",
       proprietor: inv.proprietor,
       description: inv.description,
       amount: inv.amount,
