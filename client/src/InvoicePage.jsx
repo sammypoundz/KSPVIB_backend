@@ -154,7 +154,7 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
             <div className="sub">{inv.address}</div>
           )}
           {inv.lga && inv.lga !== "—" && (
-            <div className="sub">{`${inv.lga} LGA`}</div>
+            <div className="sub">{inv.lga},</div>
           )}
           {/* Kano State is permanent on every invoice */}
           <div className="sub">{inv.state || "Kano State"}</div>

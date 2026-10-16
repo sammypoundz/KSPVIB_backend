@@ -157,7 +157,7 @@ function Receipt(props) {
             <div className="sub">{r.address}</div>
           )}
           {r.lga && r.lga !== "—" && (
-            <div className="sub">{`${r.lga} LGA`}</div>
+            <div className="sub">{r.lga},</div>
           )}
           {/* Kano State is permanent on every receipt */}
           <div className="sub">{r.state || "Kano State"}</div>

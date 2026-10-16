@@ -485,6 +485,7 @@ app.get("/api/receipt/:ref", async (req, res) => {
       amount: inv.amount,
       paidDate: inv.paidDate,
       phone: inv.phone || "—",
+      email: inv.email || "—",
     },
     verifyUrl: `${docOrigin(req)}/verify?inv=${encodeURIComponent(inv.invoiceNumber)}`,
   });
