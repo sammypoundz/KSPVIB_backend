@@ -22,26 +22,38 @@ function Page({ path }) {
 
 function Root() {
   const path = useRoute();
-  // null = still validating the token; user object = signed in; false = not
-  const [admin, setAdmin] = React.useState(null);
+  // authState.status "checking" = validating the token (guard must NOT bounce
+  // during this — otherwise logging in races the redirect back to /login);
+  // "ready" with admin user object = signed in; admin false = signed out.
+  const [authState, setAuthState] = React.useState({
+    status: "checking",
+    admin: null,
+  });
 
   // Validate the stored JWT against the server on mount and after login/logout
   const refresh = React.useCallback(() => {
-    checkAuth().then((user) => setAdmin(user || false));
+    setAuthState((s) => ({ ...s, status: "checking" }));
+    checkAuth().then((user) =>
+      setAuthState({ status: "ready", admin: user || false }),
+    );
   }, []);
   useEffect(refresh, [refresh]);
   useEffect(() => onAuthChange(refresh), [refresh]);
 
-  // Admin-only routes require login — bounce to /login otherwise
+  // Admin-only routes require login — bounce to /login otherwise. Only bounce
+  // once the check has finished: while "checking" the user may have just
+  // logged in and the result is still in flight.
   useEffect(() => {
     const needsAdmin = path === "/" || path === "/create";
-    if (needsAdmin && admin === false) navigate("/login");
-  }, [path, admin]);
+    if (authState.status === "ready" && needsAdmin && authState.admin === false)
+      navigate("/login");
+  }, [path, authState]);
 
   // Nav bar logic: admin sees the nav everywhere (verify/receipt/invoice
   // included); the public sees standalone pages without the nav.
+  const admin = authState.admin;
   const isAdminView = !!admin && path !== "/login";
-  if (admin === null) return null; // validating token — render nothing yet
+  if (authState.status === "checking") return null; // validating token
   return isAdminView ? (
     <Shell>{<Page path={path} />}</Shell>
   ) : (

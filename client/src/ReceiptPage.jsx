@@ -156,13 +156,26 @@ function Receipt(props) {
           {r.address && r.address !== "—" && (
             <div className="sub">{r.address}</div>
           )}
-          {r.lga && r.lga !== "—" && (
-            <div className="sub">{r.lga},</div>
-          )}
-          {/* Kano State is permanent on every receipt */}
-          <div className="sub">{r.state || "Kano State"}</div>
+          {/* LGA and Kano State share one line: "Ungogo, Kano State" */}
+          {(r.lga && r.lga !== "—") || r.state
+            ? (
+              <div className="sub">
+                {r.lga && r.lga !== "—" ? `${r.lga}, ` : ""}
+                {r.state || "Kano State"}
+              </div>
+            )
+            : null}
         </div>
-        <Box cap="CATEGORY" val={r.category || "—"}   sub={
+        <Box
+          cap="CATEGORY"
+          val={
+            (r.category && r.category !== "—" ? r.category : "—") +
+            // append the grade only if it isn't already part of the category
+            (r.grade && r.grade !== "—" && !(r.category || "").includes(r.grade)
+              ? ` (${r.grade})`
+              : "")
+          }
+          sub={
             [
               r.session && r.session !== "—" ? r.session : null,
               r.term && r.term !== "—" ? r.term : null,

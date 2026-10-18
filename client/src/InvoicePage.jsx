@@ -153,17 +153,24 @@ function InvoiceDoc({ verifyUrl, ...inv }) {
           {inv.address && inv.address !== "—" && (
             <div className="sub">{inv.address}</div>
           )}
-          {inv.lga && inv.lga !== "—" && (
-            <div className="sub">{inv.lga},</div>
-          )}
-          {/* Kano State is permanent on every invoice */}
-          <div className="sub">{inv.state || "Kano State"}</div>
+          {/* LGA and Kano State share one line: "Ungogo, Kano State" */}
+          {(inv.lga && inv.lga !== "—") || inv.state
+            ? (
+              <div className="sub">
+                {inv.lga && inv.lga !== "—" ? `${inv.lga}, ` : ""}
+                {inv.state || "Kano State"}
+              </div>
+            )
+            : null}
         </div>
         <Box
           cap="CATEGORY"
           val={
             (inv.category && inv.category !== "—" ? inv.category : "—") +
-            (inv.grade && inv.grade !== "—" ? ` (${inv.grade})` : "")
+            (inv.grade && inv.grade !== "—" &&
+            !(inv.category || "").includes(inv.grade)
+              ? ` (${inv.grade})`
+              : "")
           }
           sub={
             [

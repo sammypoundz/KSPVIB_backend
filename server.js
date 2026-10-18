@@ -476,6 +476,8 @@ app.get("/api/receipt/:ref", async (req, res) => {
       state: inv.state || "Kano State",
       address: inv.address || "—",
       category: inv.category || inv.paymentType,
+      // school grade — shown on the receipt as "Private (Grade X)"
+      grade: inv.grade || "—",
       session: inv.session || "—",
       paymentType: inv.paymentType,
       // terms paid for — shown in the CATEGORY box alongside the session
