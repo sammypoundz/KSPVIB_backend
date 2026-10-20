@@ -95,12 +95,20 @@ export async function downloadDocPdf(kind, ref, docEl) {
   }
   const imgData = canvas.toDataURL("image/jpeg", 0.95);
   // A4 at 96dpi in mm
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const A4_W = 210;
+  const A4_H = 297;
+  const imgH = (canvas.height * A4_W) / canvas.width;
+  // When the document fits on one page, size the page to the content so the
+  // PDF ends where the printed page would — no blank space at the bottom.
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: imgH <= A4_H ? [A4_W, imgH] : "a4",
+  });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const imgH = (canvas.height * pageW) / canvas.width;
   // One full-width page if it fits, otherwise paginate at full width.
-  if (imgH <= pageH) {
+  if (imgH <= A4_H) {
     pdf.addImage(imgData, "JPEG", 0, 0, pageW, imgH);
   } else {
     let y = 0;

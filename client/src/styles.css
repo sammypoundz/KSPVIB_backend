@@ -88,6 +88,9 @@ body {
 }
 .doc-paper.receipt-doc {
   border-top: 0;
+  /* whole-document downward shift: +0.05in (4.8px @96dpi) — every element
+     inside keeps its existing relative spacing, only the block origin moves */
+  padding-top: 38.8px; /* 34px base + 4.8px shift */
 }
 .doc-paper.invoice-doc {
   border-top: 0;

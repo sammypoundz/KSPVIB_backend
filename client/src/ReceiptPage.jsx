@@ -227,8 +227,8 @@ function Receipt(props) {
           </div>
         </div>
         <div className="qr-block">
-          {/* ~90pt at 96dpi — fixed square, generated from the live verify URL */}
-          <QrCode value={verifyUrl} size={120} />
+          {/* 1.38in × 1.38in at 96dpi = 132.48px — fixed square, generated from the live verify URL */}
+          <QrCode value={verifyUrl} size={132.48} />
           <div className="qr-caption">Scan to verify</div>
           <a className="verify-url" href={verifyUrl}>
             {verifyUrl}
