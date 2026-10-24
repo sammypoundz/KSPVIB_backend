@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { verifyInvoice, money, fmtDate, downloadDocPdf } from "./api.js";
+import React, { useRef, useState, useEffect } from "react";
+import { verifyInvoice, money, fmtDate, downloadDocPdf, fetchReceipt } from "./api.js";
 import { navigate, useRoute } from "./router.jsx";
+import { Receipt } from "./ReceiptPage.jsx";
+import logo from "./assets/3.png";
+import logo1 from "./assets/1.png";
+import logo2 from "./assets/2.png";
+import QrCode from "./QrCode.jsx";
 
 export default function App() {
   const [ref, setRef] = useState(
@@ -10,6 +15,17 @@ export default function App() {
   const [error, setError] = useState(null);
   const [invoice, setInvoice] = useState(null);
   const [receiptAvailable, setReceiptAvailable] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  // Off-screen container where the receipt is rendered before PDF capture.
+  // verifyUrl is built from the page origin, matching the on-page receipt.
+  const receiptSlot = useRef(null);
+  const verifyUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/verify?inv=${encodeURIComponent(
+          invoice?.invoiceNumber || "",
+        )}`
+      : "";
 
   useRoute(); // keep in sync with back/forward
 
@@ -103,18 +119,36 @@ export default function App() {
                 </div>
                 <div className="actions">
                   {paid && receiptAvailable ? (
-                    <a
+                    <button
                       className="action primary"
-                      href={`/receipt?inv=${encodeURIComponent(invoice.invoiceNumber)}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigate(
-                          `/receipt?inv=${encodeURIComponent(invoice.invoiceNumber)}`,
-                        );
+                      disabled={downloadingReceipt}
+                      onClick={async () => {
+                        try {
+                          setDownloadingReceipt(true);
+                          const data = await fetchReceipt(invoice.invoiceNumber);
+                          setReceiptData(data.receipt);
+                          if (!receiptSlot.current) throw new Error("Preparing receipt failed. Try again.");
+                          // Wait for the off-screen receipt (logos, QR) to paint:
+                          // poll briefly until the QR <img> has rendered.
+                          for (let i = 0; i < 30; i++) {
+                            if (receiptSlot.current.querySelector("img.qr-img")) break;
+                            await new Promise((r) => setTimeout(r, 50));
+                          }
+                          await new Promise((r) => setTimeout(r, 100));
+                          await downloadDocPdf(
+                            "receipt",
+                            invoice.invoiceNumber,
+                            receiptSlot.current.querySelector(".doc-paper"),
+                          );
+                        } catch (err) {
+                          alert(`Download failed: ${err.message}`);
+                        } finally {
+                          setDownloadingReceipt(false);
+                        }
                       }}
                     >
-                      Download receipt
-                    </a>
+                      {downloadingReceipt ? "Preparing…" : "Download receipt"}
+                    </button>
                   ) : (
                     <a
                       className="action primary"
@@ -141,6 +175,30 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      {/* Off-screen receipt mount used for direct PDF download — never visible */}
+      <div
+        ref={receiptSlot}
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          left: "-10000px",
+          top: 0,
+          width: 860,
+        }}
+      >
+        {downloadingReceipt && (
+          <article
+            className="doc-paper receipt-doc"
+            style={{ width: 860, maxWidth: "none", background: "#fff" }}
+          >
+            <Receipt
+              {...(receiptData || invoice)}
+              verifyUrl={verifyUrl}
+            />
+          </article>
+        )}
+      </div>
 
       <footer>
         This page confirms an invoice issued by the Kano State VPE Portal.

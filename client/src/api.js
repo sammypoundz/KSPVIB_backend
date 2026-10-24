@@ -94,22 +94,22 @@ export async function downloadDocPdf(kind, ref, docEl) {
     docEl.style.maxWidth = prev.maxWidth;
   }
   const imgData = canvas.toDataURL("image/jpeg", 0.95);
-  // A4 at 96dpi in mm
+  // Always produce a full A4 page (210×297 mm) — the document is scaled to the
+  // page width and pinned to the top, so short receipts still print as a
+  // complete A4 sheet instead of a cropped one.
   const A4_W = 210;
   const A4_H = 297;
   const imgH = (canvas.height * A4_W) / canvas.width;
-  // When the document fits on one page, size the page to the content so the
-  // PDF ends where the printed page would — no blank space at the bottom.
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "mm",
-    format: imgH <= A4_H ? [A4_W, imgH] : "a4",
+    format: "a4",
   });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  // One full-width page if it fits, otherwise paginate at full width.
+  // One full A4 page if it fits, otherwise paginate at full width.
   if (imgH <= A4_H) {
-    pdf.addImage(imgData, "JPEG", 0, 0, pageW, imgH);
+    pdf.addImage(imgData, "JPEG", 0, 0, pageW, Math.min(imgH, pageH));
   } else {
     let y = 0;
     while (y < imgH) {

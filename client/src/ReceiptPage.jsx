@@ -110,7 +110,7 @@ export default function ReceiptPage() {
   );
 }
 
-function Receipt(props) {
+export function Receipt(props) {
   const { verifyUrl, ...r } = props;
   return (
     <>
