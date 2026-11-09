@@ -535,12 +535,24 @@ async function getPdfBrowser() {
 }
 
 async function renderDocPdf(req, kind, ref) {
-  const origin = docOrigin(req);
+  // IMPORTANT: the headless browser must load the document page from THIS
+  // backend's own origin (which also serves the built client), NOT from
+  // FRONTEND_URL. Otherwise the SPA inside the headless browser calls the API
+  // cross-origin; if that call is blocked/offline the page renders its error
+  // state ("Invoice unavailable. Failed to fetch") and THAT gets printed into
+  // the PDF. Same-origin here needs no CORS at all.
+  const origin =
+    PDF_BASE_URL || `${req.protocol}://${req.get("host") || `localhost:${PORT}`}`;
   const target = `${origin}/${kind}?inv=${encodeURIComponent(ref)}`;
   const browser = await getPdfBrowser();
   const page = await browser.newPage();
   try {
     await page.goto(target, { waitUntil: "networkidle0", timeout: 60000 });
+    // Safety net: if the page could not load its data it renders the error
+    // notice instead of the document. Refuse to print that — the caller
+    // (browser) then falls back to its local raster capture of the real doc.
+    const failed = await page.$(".doc-paper .notice");
+    if (failed) throw new Error(`Document page failed to load (${kind}).`);
     await page.evaluateHandle("document.fonts.ready");
     const pdfBuffer = await page.pdf({
       printBackground: true,

@@ -450,7 +450,8 @@ footer {
 }
 .rhead {
   text-align: center;
-  border-bottom: 3px solid #13864a;
+  /* thin design rule ≈2pt (2.7px @96dpi) — not a heavy border */
+  border-bottom: 2.7px solid #13864a;
   padding-bottom: 14px;
 }
 .rhead .gov {
@@ -476,10 +477,13 @@ footer {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  margin: 18px 0;
+  /* ≈22–24pt (30–32px) breathing space between the green rule and the
+     Payment Receipt heading */
+  margin: 30px 0 18px;
 }
 .title {
-  font-size: 30px;
+  /* approved: Payment Receipt = 25.5pt ≈ 34px @96dpi */
+  font-size: 34px;
   font-weight: 850;
   text-transform: none; /* title case, not all caps */
 }
@@ -488,7 +492,8 @@ footer {
 }
 .meta .no {
   color: #087c3f;
-  font-size: 19px;
+  /* approved: invoice number = 17pt ≈ 22.7px */
+  font-size: 23px;
   font-weight: 850;
 }
 .meta .paid {
@@ -506,14 +511,18 @@ footer {
 }
 .boxes {
   display: grid;
-  /* three FIXED columns — left (customer), centre (category), right
-     (proprietor). minmax(0,…) lets long values wrap inside their own
-     column instead of pushing into a neighbour. */
-  grid-template-columns: 1.4fr 1fr 1.1fr;
+  /* approved proportions: RECEIVED FROM 34% | CATEGORY 32% | PROPRIETOR 34%.
+     minmax(0,…) lets long values wrap inside their own column instead of
+     pushing into a neighbour. */
+  grid-template-columns: 34fr 32fr 34fr;
+  /* approved size: ≈516pt × 99pt → 688px × 132px @96dpi (doc content width
+     is 784px, so the card no longer spans the full page width) */
+  max-width: 688px;
+  min-height: 132px;
   background: #f6f7f9;
   border-radius: 18px;
   padding: 14px;
-  margin: 16px 0;
+  margin: 16px auto;
 }
 .box {
   padding: 0 20px;
@@ -553,6 +562,12 @@ footer {
 .cat-sub {
   font-weight: 400;
   margin-top: 4px;
+  /* session/term must stay on ONE line when short — the word "Term" must
+     never wrap — but a long combined value would otherwise overflow into the
+     PROPRIETOR column, so allow wrapping once it can no longer fit. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .doc-paper table {
   width: 100%;
@@ -600,8 +615,12 @@ footer {
   font-weight: 800;
   break-inside: avoid;
 }
+/* approved sizes: Total Paid label = 13.5pt ≈ 18px, amount = 19.5pt ≈ 26px */
+.total span {
+  font-size: 18px;
+}
 .total strong {
-  font-size: 22px;
+  font-size: 26px;
   color: #087c3f;
 }
 .bottom {
@@ -609,7 +628,10 @@ footer {
   justify-content: space-between;
   align-items: flex-end;
   gap: 30px;
+  /* Thank-you block sits noticeably lower than the Total Paid box —
+     controlled whitespace, not immediately under the total */
   margin-top: 22px;
+  padding-top: 34px;
   /* stretch to the full printable width so the QR block sits on the extreme end */
   width: 100%;
 }
@@ -823,26 +845,63 @@ footer {
     padding-left: 22px;
     padding-right: 22px;
   }
+  /* Keep the desktop two-column structure on mobile — responsive sizing
+     only, never restructuring. Input takes the remaining width, Verify
+     keeps its own width beside it. */
   .row {
-    flex-direction: column;
+    flex-direction: row;
+    gap: 8px;
+  }
+  .row input {
+    flex: 1;
+    min-width: 0;
+    padding: 13px 14px;
+    font-size: 16px;
+    border-radius: 12px;
   }
   .verify-form button {
     height: 52px;
+    flex: 0 0 auto;
+    padding: 0 18px;
+    font-size: 15px;
+    white-space: nowrap;
+    border-radius: 12px;
   }
+  /* labels/values stay as two columns (label left, value right-aligned) */
   .detail {
-    grid-template-columns: 1fr;
-    gap: 3px;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    font-size: 14px;
+  }
+  .detail .k {
+    font-size: 12px;
   }
   .features {
     grid-template-columns: 1fr;
   }
+  /* keep Download receipt full width within the card, stacked vertically */
   .actions {
     flex-direction: column;
   }
+  /* invoice number stays left, PAID badge stays right — same row as desktop */
   .result-head {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     gap: 10px;
+  }
+  .invoice-no {
+    font-size: 17px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .status {
+    padding: 7px 13px;
+    font-size: 11.5px;
+    flex-shrink: 0;
+  }
+  .details {
+    padding: 16px 16px;
+    gap: 14px;
   }
   .doc-paper {
     padding: 30px 22px;

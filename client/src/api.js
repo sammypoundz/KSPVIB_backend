@@ -56,13 +56,37 @@ export async function fetchReceipt(ref) {
   return data;
 }
 
-// Generates the PDF entirely in the browser from the on-screen document
-// element (html2canvas-pro + jsPDF). Unlike the old server-side Puppeteer
-// endpoint, this works identically offline and on any deployed host (Render
-// etc.) because it does not depend on headless Chromium being installed on
-// the server. The layout captured is the same .doc-paper element that the
-// print dialog prints, so Download and Print always match.
+// Generates the PDF for a document. Preferred path is the server's native
+// PDF endpoint (Puppeteer + Chromium print engine) which produces a REAL
+// text-based, vector PDF — selectable, searchable, sharp at any zoom.
+// The raster capture is kept ONLY as a fallback when the server endpoint is
+// unreachable (e.g. purely static hosting / offline dev).
 export async function downloadDocPdf(kind, ref, docEl) {
+  // 1) Preferred: native server-side PDF (text-based, vector, A4)
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/${kind}/${encodeURIComponent(ref)}/pdf`,
+    );
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${kind === "receipt" ? "Receipt" : "Invoice"}-${ref}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+  } catch {
+    // fall through to the raster fallback below
+  }
+  // 2) Fallback: browser raster capture (existing behaviour)
+  await downloadDocPdfRaster(kind, ref, docEl);
+}
+
+async function downloadDocPdfRaster(kind, ref, docEl) {
   if (!docEl) throw new Error("The document is not ready yet. Try again.");
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),

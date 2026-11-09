@@ -200,11 +200,7 @@ export default function App() {
         )}
       </div>
 
-      <footer>
-        This page confirms an invoice issued by the Kano State VPE Portal.
-        <br />
-        Kano State Ministry of Education · KSPVIB
-      </footer>
+      <footer>This page confirms an invoice issued by the Kano State VPE Portal.</footer>
     </div>
   );
 }
